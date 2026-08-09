@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #FAF6EE;
+    background-image: radial-gradient(#E2D9C8 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+}
+
+/* Custom cozy scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F1ECE1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border: 2px solid #1E293B;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Tactile button custom utility */
+.btn-tactile {
+  border-width: 4px;
+  border-color: #1E293B;
+  border-radius: 1rem;
+  box-shadow: 0px 4px 0px 0px #1E293B;
+  transition: all 0.1s ease;
+  cursor: pointer;
+}
+
+.btn-tactile:active {
+  transform: translateY(4px);
+  box-shadow: 0px 0px 0px 0px #1E293B;
+}
+
+.btn-tactile-sm {
+  border-width: 3px;
+  border-color: #1E293B;
+  border-radius: 0.75rem;
+  box-shadow: 0px 3px 0px 0px #1E293B;
+  transition: all 0.1s ease;
+  cursor: pointer;
+}
+
+.btn-tactile-sm:active {
+  transform: translateY(3px);
+  box-shadow: 0px 0px 0px 0px #1E293B;
+}
+
+.card-cozy {
+  border-width: 4px;
+  border-color: #1E293B;
+  border-radius: 1.5rem;
+  background-color: #FFFFFF;
+  box-shadow: 4px 4px 0px 0px rgba(30, 41, 59, 1);
+}
