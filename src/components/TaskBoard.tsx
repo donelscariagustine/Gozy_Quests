@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
-import { Quest, QuestCategory, AvatarTrait } from '../types/todo';
-import { DIFFICULTY_XP, calculateFinalXP, formatTimeHuman, CATEGORIES } from '../utils/gameEngine';
-import { Plus, Play, Check, Trash2, Clock, Sparkles, CheckCircle2, Timer } from 'lucide-react';
+import { Quest, CustomCategory, AvatarTrait } from '../types/todo';
+import {
+  getCategoryInfo,
+  DIFFICULTY_XP,
+  getDeadlineStatus,
+  calculateFinalXP,
+} from '../utils/gameEngine';
+import { Plus, Search, CheckCircle, Play, Trash2, Clock, Calendar, Sparkles } from 'lucide-react';
 import { sounds } from '../utils/audio';
 
 interface TaskBoardProps {
@@ -9,6 +14,7 @@ interface TaskBoardProps {
   activeQuestId: string | null;
   streak: number;
   traits: AvatarTrait[];
+  customCategories: CustomCategory[];
   onOpenAddQuestModal: () => void;
   onStartQuest: (id: string) => void;
   onFinishQuest: (id: string) => void;
@@ -21,302 +27,269 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({
   activeQuestId,
   streak,
   traits,
+  customCategories,
   onOpenAddQuestModal,
   onStartQuest,
   onFinishQuest,
   onDeleteQuest,
   onClearCompleted,
 }) => {
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'completed'>('all');
-  const [selectedCategory, setSelectedCategory] = useState<QuestCategory | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed'>('all');
 
   const filteredQuests = quests.filter((q) => {
-    const matchesStatus =
-      filterStatus === 'all'
-        ? true
-        : filterStatus === 'active'
-        ? q.status !== 'completed'
-        : q.status === 'completed';
-
-    const matchesCategory = selectedCategory === 'all' ? true : q.category === selectedCategory;
     const matchesSearch = q.title.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesStatus && matchesCategory && matchesSearch;
+    const matchesCategory = selectedCategoryFilter === 'all' || q.categoryId === selectedCategoryFilter;
+    const matchesStatus =
+      statusFilter === 'all' ||
+      (statusFilter === 'active' && q.status !== 'completed') ||
+      (statusFilter === 'completed' && q.status === 'completed');
+
+    return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  const activeCount = quests.filter((q) => q.status !== 'completed').length;
   const completedCount = quests.filter((q) => q.status === 'completed').length;
 
   return (
-    <section className="space-y-6">
-      {/* Top Banner with Action Button & Search */}
-      <div className="card-cozy p-4 sm:p-5 bg-white flex flex-col sm:flex-row items-center justify-between gap-4">
-        {/* Search Bar */}
-        <div className="relative flex-1 w-full">
+    <div className="space-y-6 animate-pop-in">
+      {/* Search & Actions Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search quests by title..."
-            className="w-full pl-4 pr-10 py-2.5 rounded-2xl border-3 border-slate-800 bg-[#FAF6EE] text-slate-800 placeholder-slate-400 font-bold focus:outline-none focus:ring-4 focus:ring-amber-200 transition-all text-sm"
+            placeholder="Search pirate quests..."
+            className="w-full pl-10 pr-4 py-2.5 rounded-2xl border-3 border-slate-800 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-bold focus:outline-none focus:ring-4 focus:ring-amber-200 dark:focus:ring-indigo-500/40"
           />
-          <Sparkles className="w-4 h-4 text-amber-400 absolute right-3.5 top-3.5 pointer-events-none" />
         </div>
 
-        {/* Create Quest Modal Launcher Button */}
         <button
           onClick={() => {
             sounds.playPop();
             onOpenAddQuestModal();
           }}
-          className="btn-tactile bg-emerald-400 hover:bg-emerald-500 text-slate-900 font-black px-6 py-2.5 text-sm flex items-center justify-center gap-2 w-full sm:w-auto flex-shrink-0"
+          className="btn-tactile bg-amber-400 hover:bg-amber-500 dark:bg-indigo-600 dark:hover:bg-indigo-700 text-slate-900 dark:text-white font-black px-5 py-2.5 text-xs flex items-center justify-center gap-2 shadow-chunky-sm"
         >
-          <Plus className="w-5 h-5 stroke-[3]" />
-          <span>Add New Quest</span>
+          <Plus className="w-4 h-4 stroke-[3]" /> Add New Quest
         </button>
       </div>
 
-      {/* Category Tabs & Status Filters */}
-      <div className="space-y-3">
-        {/* Category Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-          <button
-            onClick={() => {
-              sounds.playPop();
-              setSelectedCategory('all');
-            }}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all border-2 border-slate-800 flex-shrink-0 ${
-              selectedCategory === 'all'
-                ? 'bg-amber-300 text-slate-900 shadow-chunky-sm translate-y-[-2px]'
-                : 'bg-white text-slate-600 hover:bg-amber-50'
-            }`}
-          >
-            🌟 All Categories
-          </button>
-          {(Object.keys(CATEGORIES) as QuestCategory[]).map((catKey) => {
-            const cat = CATEGORIES[catKey];
-            const isSelected = selectedCategory === catKey;
+      {/* Horizontal Scrollbar-Free Category Pill Filter Bar */}
+      <div className="no-scrollbar flex w-full items-center gap-2 overflow-x-auto pb-2 scroll-smooth">
+        <button
+          onClick={() => {
+            sounds.playPop();
+            setSelectedCategoryFilter('all');
+          }}
+          className={`shrink-0 rounded-2xl px-3.5 py-1.5 text-xs font-black border-2 border-slate-800 transition-all ${
+            selectedCategoryFilter === 'all'
+              ? 'bg-slate-800 text-white dark:bg-indigo-500 shadow-chunky-sm translate-y-[-1px]'
+              : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-amber-50'
+          }`}
+        >
+          All Categories ({quests.length})
+        </button>
 
-            return (
-              <button
-                key={catKey}
-                onClick={() => {
-                  sounds.playPop();
-                  setSelectedCategory(catKey);
-                }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all border-2 border-slate-800 flex-shrink-0 flex items-center gap-1 ${
-                  isSelected
-                    ? `${cat.badgeBg} ${cat.badgeText} shadow-chunky-sm translate-y-[-2px]`
-                    : 'bg-white text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                <span>{cat.icon}</span>
-                <span>{cat.name}</span>
-              </button>
-            );
-          })}
-        </div>
+        {Object.keys(customCategories.length ? customCategories : []).map(() => null)}
+        {['coding', 'workout', 'work', 'study', 'chores', 'creative', 'other'].map((catId) => {
+          const info = getCategoryInfo(catId, customCategories);
+          const isSelected = selectedCategoryFilter === catId;
 
-        {/* Status Filter Tabs */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 bg-white border-3 border-slate-800 p-1.5 rounded-2xl shadow-chunky-sm w-full sm:w-auto">
-            {(['all', 'active', 'completed'] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => {
-                  sounds.playPop();
-                  setFilterStatus(t);
-                }}
-                className={`px-4 py-1.5 rounded-xl text-xs font-bold capitalize transition-all border-2 border-transparent ${
-                  filterStatus === t
-                    ? 'bg-indigo-400 text-white shadow-chunky-sm'
-                    : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                {t === 'all' && `All (${quests.length})`}
-                {t === 'active' && `Active (${activeCount})`}
-                {t === 'completed' && `Done (${completedCount})`}
-              </button>
-            ))}
-          </div>
-
-          {completedCount > 0 && (
+          return (
             <button
+              key={catId}
               onClick={() => {
                 sounds.playPop();
-                onClearCompleted();
+                setSelectedCategoryFilter(catId);
               }}
-              className="text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 border-2 border-rose-200 px-3 py-1.5 rounded-xl hover:bg-rose-100 transition-colors flex items-center gap-1.5 self-end sm:self-auto"
+              className={`shrink-0 rounded-2xl px-3.5 py-1.5 text-xs font-black border-2 border-slate-800 transition-all flex items-center gap-1.5 ${
+                isSelected
+                  ? `${info.badgeBg} ${info.badgeText} shadow-chunky-sm translate-y-[-1px]`
+                  : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-amber-50'
+              }`}
             >
-              <Trash2 className="w-3.5 h-3.5" /> Clear Completed
+              <span>{info.icon}</span>
+              <span>{info.name}</span>
             </button>
-          )}
-        </div>
+          );
+        })}
+
+        {customCategories.map((c) => {
+          const isSelected = selectedCategoryFilter === c.id;
+          return (
+            <button
+              key={c.id}
+              onClick={() => {
+                sounds.playPop();
+                setSelectedCategoryFilter(c.id);
+              }}
+              className={`shrink-0 rounded-2xl px-3.5 py-1.5 text-xs font-black border-2 border-slate-800 transition-all flex items-center gap-1.5 ${
+                isSelected
+                  ? 'bg-indigo-300 text-slate-900 shadow-chunky-sm translate-y-[-1px]'
+                  : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-amber-50'
+              }`}
+            >
+              <span>{c.icon}</span>
+              <span>{c.name}</span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Quest Cards List */}
-      {filteredQuests.length === 0 ? (
-        <div className="card-cozy p-10 text-center bg-white flex flex-col items-center justify-center gap-3">
-          <div className="w-16 h-16 rounded-full bg-amber-100 border-3 border-slate-800 flex items-center justify-center text-3xl">
-            {filterStatus === 'completed' ? '📜' : activeCount === 0 ? '✨' : '🔍'}
-          </div>
-          <h3 className="text-lg font-bold text-slate-800">
-            {filterStatus === 'completed'
-              ? 'No completed quests yet!'
-              : activeCount === 0
-              ? 'All quests complete! Time to celebrate! 🎉'
-              : 'No quests match your filter criteria.'}
-          </h3>
+      {/* Secondary Status Filter & Clear Actions */}
+      <div className="flex items-center justify-between text-xs font-bold text-slate-600 dark:text-slate-400">
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => {
-              sounds.playPop();
-              onOpenAddQuestModal();
-            }}
-            className="btn-tactile bg-amber-300 hover:bg-amber-400 px-5 py-2 text-xs font-bold text-slate-900 mt-2"
+            onClick={() => setStatusFilter('all')}
+            className={`px-2.5 py-1 rounded-lg ${statusFilter === 'all' ? 'bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white font-black' : ''}`}
           >
-            + Create a New Quest
+            All
+          </button>
+          <button
+            onClick={() => setStatusFilter('active')}
+            className={`px-2.5 py-1 rounded-lg ${statusFilter === 'active' ? 'bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white font-black' : ''}`}
+          >
+            Active
+          </button>
+          <button
+            onClick={() => setStatusFilter('completed')}
+            className={`px-2.5 py-1 rounded-lg ${statusFilter === 'completed' ? 'bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white font-black' : ''}`}
+          >
+            Completed ({completedCount})
           </button>
         </div>
-      ) : (
-        <div className="space-y-3.5">
-          {filteredQuests.map((quest) => {
-            const isCurrentActive = activeQuestId === quest.id;
-            const isCompleted = quest.status === 'completed';
-            const isInProgress = quest.status === 'in_progress';
 
-            const categoryInfo = CATEGORIES[quest.category];
+        {completedCount > 0 && (
+          <button
+            onClick={onClearCompleted}
+            className="text-rose-500 hover:text-rose-600 font-bold transition-colors"
+          >
+            Clear Completed
+          </button>
+        )}
+      </div>
+
+      {/* Quest Cards Grid */}
+      {filteredQuests.length === 0 ? (
+        <div className="card-cozy p-8 text-center bg-white dark:bg-slate-900 space-y-3">
+          <div className="text-4xl">📜</div>
+          <h3 className="text-lg font-black text-slate-900 dark:text-white">No Quests Found</h3>
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+            You have no active quests matching this filter. Click "Add New Quest" to set sail!
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filteredQuests.map((quest) => {
+            const isCompleted = quest.status === 'completed';
+            const isActive = quest.id === activeQuestId;
+            const categoryInfo = getCategoryInfo(quest.categoryId, customCategories);
             const baseXP = DIFFICULTY_XP[quest.difficulty];
-            const { finalXP } = calculateFinalXP(baseXP, streak, quest.category, traits);
+            const { finalXP } = calculateFinalXP(baseXP, streak, quest.categoryId, traits);
+            const deadlineStatus = getDeadlineStatus(quest.dueDateTime);
 
             return (
               <div
                 key={quest.id}
-                className={`card-cozy p-4 sm:p-5 transition-all duration-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 group ${
+                className={`w-full overflow-hidden rounded-3xl border-4 border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5 shadow-chunky transition-all flex flex-col justify-between ${
                   isCompleted
-                    ? 'bg-slate-50 opacity-80 border-slate-400 shadow-chunky-sm'
-                    : isCurrentActive
-                    ? 'bg-amber-50/90 border-indigo-500 shadow-chunky-lg ring-4 ring-indigo-200'
-                    : 'bg-white hover:translate-y-[-2px] hover:shadow-chunky-lg'
+                    ? 'opacity-70 bg-slate-50 dark:bg-slate-950 border-slate-400 dark:border-slate-800'
+                    : isActive
+                    ? 'border-indigo-500 ring-4 ring-indigo-200 dark:ring-indigo-500/30'
+                    : 'dark:border-indigo-500/40 hover:translate-y-[-2px]'
                 }`}
               >
-                {/* Left: Category Icon, Title & Meta Details */}
-                <div className="flex items-start gap-3.5 min-w-0 flex-1">
-                  {/* Status / Category Icon */}
-                  <div
-                    className={`w-10 h-10 rounded-2xl border-3 border-slate-800 flex items-center justify-center flex-shrink-0 mt-0.5 text-xl ${
-                      isCompleted
-                        ? 'bg-emerald-400 text-slate-900 shadow-chunky-sm'
-                        : isCurrentActive
-                        ? 'bg-indigo-500 text-white animate-pulse'
-                        : 'bg-amber-100 text-slate-800'
-                    }`}
-                  >
-                    {isCompleted ? (
-                      <Check className="w-5 h-5 stroke-[3]" />
-                    ) : isCurrentActive ? (
-                      <Timer className="w-5 h-5 animate-spin text-white" />
-                    ) : (
-                      categoryInfo.icon
+                <div>
+                  {/* Category Pills & Badges Header */}
+                  <div className="no-scrollbar flex flex-wrap items-center gap-2 mb-3">
+                    <span
+                      className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black uppercase border border-slate-800 ${categoryInfo.badgeBg} ${categoryInfo.badgeText}`}
+                    >
+                      {categoryInfo.icon} {categoryInfo.name}
+                    </span>
+
+                    <span className="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black uppercase bg-amber-100 dark:bg-indigo-950 text-slate-900 dark:text-indigo-200 border border-slate-800">
+                      {quest.difficulty.toUpperCase()} +{finalXP} XP
+                    </span>
+
+                    {quest.hasCustomDeadline && (
+                      <span className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-black bg-purple-100 dark:bg-purple-950 text-purple-900 dark:text-purple-200 border border-slate-800">
+                        ⚙️ Custom Timer
+                      </span>
+                    )}
+
+                    {quest.dueDateTime && (
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-black border border-slate-800 flex items-center gap-1 ${
+                          deadlineStatus.isOverdue
+                            ? 'bg-rose-500 text-white'
+                            : deadlineStatus.isUrgent
+                            ? 'bg-amber-400 text-slate-900'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                        }`}
+                      >
+                        <Clock className="w-3 h-3" />
+                        {deadlineStatus.formattedText}
+                      </span>
                     )}
                   </div>
 
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      {/* Category Badge */}
-                      <span
-                        className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase border border-slate-800 ${categoryInfo.badgeBg} ${categoryInfo.badgeText}`}
-                      >
-                        {categoryInfo.icon} {categoryInfo.name}
-                      </span>
-
-                      {/* Difficulty Pill */}
-                      <span
-                        className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase border border-slate-800 ${
-                          quest.difficulty === 'easy'
-                            ? 'bg-emerald-200 text-emerald-950'
-                            : quest.difficulty === 'medium'
-                            ? 'bg-amber-200 text-amber-950'
-                            : 'bg-rose-200 text-rose-950'
-                        }`}
-                      >
-                        {quest.difficulty} • +{finalXP} XP
-                      </span>
-
-                      {/* Estimated Target Time */}
-                      <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-300">
-                        ⏱️ {quest.estimatedMinutes}m target
-                      </span>
-
-                      {/* Time Spent */}
-                      {quest.timeSpentSeconds > 0 && (
-                        <span className="text-[10px] font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200">
-                          Focus: {formatTimeHuman(quest.timeSpentSeconds)}
-                        </span>
-                      )}
-                    </div>
-
-                    <h4
-                      className={`text-base font-bold block truncate ${
-                        isCompleted ? 'line-through text-slate-400' : 'text-slate-900'
-                      }`}
-                    >
-                      {quest.title}
-                    </h4>
-                  </div>
+                  {/* Quest Title Header with break-words & line-clamp-2 */}
+                  <h3
+                    className={`mb-4 text-base font-extrabold leading-tight text-slate-900 dark:text-slate-100 break-words line-clamp-2 ${
+                      isCompleted ? 'line-through text-slate-400 dark:text-slate-500' : ''
+                    }`}
+                  >
+                    {quest.title}
+                  </h3>
                 </div>
 
-                {/* Right: Actions */}
-                <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-shrink-0">
-                  {!isCompleted && (
-                    <>
-                      {isInProgress || isCurrentActive ? (
-                        <button
-                          onClick={() => {
-                            onFinishQuest(quest.id);
-                          }}
-                          className="btn-tactile bg-emerald-400 hover:bg-emerald-500 text-slate-900 font-bold px-4 py-2 text-xs flex items-center gap-1.5"
-                        >
-                          <CheckCircle2 className="w-4 h-4 text-slate-900" />
-                          <span>Finish Work & Claim XP</span>
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => {
-                            sounds.playPop();
-                            onStartQuest(quest.id);
-                          }}
-                          className="btn-tactile bg-indigo-400 hover:bg-indigo-500 text-white font-bold px-4 py-2 text-xs flex items-center gap-1.5"
-                        >
-                          <Play className="w-3.5 h-3.5 fill-white" />
-                          <span>Start Quest Timer</span>
-                        </button>
-                      )}
-                    </>
-                  )}
+                {/* Bottom Action Row with High Contrast Delete Button */}
+                <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400">
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>{quest.estimatedMinutes}m est</span>
+                  </div>
 
-                  {isCompleted && (
-                    <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-300 flex items-center gap-1">
-                      <Check className="w-4 h-4 stroke-[3]" /> Completed
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {isCompleted ? (
+                      <div className="px-3 py-1.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-400 rounded-xl text-xs font-black flex items-center gap-1">
+                        <CheckCircle className="w-3.5 h-3.5 text-emerald-600" /> Done
+                      </div>
+                    ) : isActive ? (
+                      <button
+                        onClick={() => onFinishQuest(quest.id)}
+                        className="btn-tactile px-4 py-2 bg-emerald-400 hover:bg-emerald-500 text-slate-900 font-black text-xs flex items-center gap-1 shadow-chunky-sm"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 fill-amber-300" /> Complete
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => onStartQuest(quest.id)}
+                        className="btn-tactile px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs flex items-center gap-1 shadow-chunky-sm"
+                      >
+                        <Play className="w-3.5 h-3.5 fill-white" /> Start Timer
+                      </button>
+                    )}
 
-                  {/* Delete Button */}
-                  <button
-                    onClick={() => {
-                      sounds.playPop();
-                      onDeleteQuest(quest.id);
-                    }}
-                    className="p-2 rounded-xl border-2 border-transparent hover:border-slate-800 hover:bg-rose-100 text-slate-400 hover:text-rose-600 transition-all"
-                    title="Delete quest"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                    {/* High-Contrast Rose Delete Button */}
+                    <button
+                      onClick={() => onDeleteQuest(quest.id)}
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border-2 border-slate-800 bg-rose-500 text-white shadow-chunky-sm hover:bg-rose-600 active:translate-y-0.5 active:shadow-none transition-all"
+                      title="Delete Quest"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
       )}
-    </section>
+    </div>
   );
 };

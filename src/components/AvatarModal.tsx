@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { AvatarState } from '../types/todo';
-import { AvatarRenderer } from './AvatarRenderer';
+import { FullBodyAvatarRenderer } from './FullBodyAvatarRenderer';
 import { AVAILABLE_TITLES } from '../utils/gameEngine';
-import { X, Sparkles, Check, Shuffle, Crown, User } from 'lucide-react';
+import { X, Sparkles, Check, Shuffle, Crown } from 'lucide-react';
 import { sounds } from '../utils/audio';
 
 interface AvatarModalProps {
@@ -12,49 +12,65 @@ interface AvatarModalProps {
   onSaveAvatar: (newAvatar: AvatarState) => void;
 }
 
-const SKIN_OPTIONS = [
-  { label: 'Porcelain', value: '#FFDBAC' },
-  { label: 'Warm Sand', value: '#F1C27D' },
-  { label: 'Golden Tan', value: '#E0AC69' },
-  { label: 'Deep Caramel', value: '#8D5524' },
-  { label: 'Soft Peach', value: '#FFE0BD' },
-  { label: 'Rich Espresso', value: '#523315' },
+const HEAD_ITEMS = [
+  { label: 'Straw Hat (Luffy Ref) 👒', value: 'straw_hat' },
+  { label: 'Pirate Captain Bicorne 🏴‍☠️', value: 'pirate_bicorne' },
+  { label: 'Wizard Hat 🧙', value: 'wizard_hat' },
+  { label: 'Royal Crown 👑', value: 'crown' },
+  { label: 'Headphones 🎧', value: 'headphones' },
+  { label: 'Viking Helm 🪖', value: 'viking' },
+  { label: 'Bunny Ears 🐰', value: 'bunny_ears' },
+  { label: 'None', value: 'none' },
 ];
 
-const HAIR_STYLE_OPTIONS = [
-  { label: 'Short Crop', value: 'short' },
-  { label: 'Long Waves', value: 'long' },
-  { label: 'Spiky', value: 'spiky' },
-  { label: 'Top Bun', value: 'bun' },
-  { label: 'Wavy Flow', value: 'wavy' },
-  { label: 'Cute Bob', value: 'bob' },
+const FACE_ITEMS = [
+  { label: 'Zoro Eye Scar / Eyepatch 👁️', value: 'zoro_eyepatch' },
+  { label: 'Pirate Bandana 🏴‍☠️', value: 'bandana' },
+  { label: 'Anime Sparkle Eyes ✨', value: 'anime_eyes' },
+  { label: 'Wayfarer Glasses 👓', value: 'glasses' },
+  { label: 'Cyber Goggles 🥽', value: 'goggles' },
+  { label: 'Monocle 🧐', value: 'monocle' },
+  { label: 'Surgical Mask 😷', value: 'mask' },
+  { label: 'None', value: 'none' },
 ];
 
-const HAIR_COLOR_OPTIONS = [
-  { label: 'Dark Chocolate', value: '#4A3728' },
-  { label: 'Golden Blonde', value: '#E6C280' },
-  { label: 'Auburn Red', value: '#D63031' },
-  { label: 'Turquoise Cyan', value: '#00CEC9' },
-  { label: 'Pastel Lavender', value: '#A29BFE' },
-  { label: 'Midnight Black', value: '#2D3436' },
+const HAIR_STYLES = [
+  { label: 'Emperor Red Flow (Shanks) 🔴', value: 'shanks_flow' },
+  { label: 'Spiky Anime ⚡', value: 'spiky' },
+  { label: 'Short Crop ✂️', value: 'short' },
+  { label: 'Long Flow 🌊', value: 'long' },
+  { label: 'Top Bun 🍡', value: 'bun' },
+  { label: 'Afro Cloud ☁️', value: 'afro' },
 ];
 
-const OUTFIT_COLOR_OPTIONS = [
-  { label: 'Royal Purple', value: '#6C5CE7' },
-  { label: 'Coral Pink', value: '#FF7675' },
-  { label: 'Mint Teal', value: '#55E6C1' },
-  { label: 'Sunflower Yellow', value: '#FDCB6E' },
-  { label: 'Sky Blue', value: '#74B9FF' },
-  { label: 'Matcha Green', value: '#81ECEC' },
+const OUTFIT_OPTIONS = [
+  { label: 'Pirate Captain Robe 🏴‍☠️', value: 'pirate_captain' },
+  { label: 'Knight Armor 🛡️', value: 'armor' },
+  { label: 'Cozy Hoodie 🧥', value: 'hoodie' },
+  { label: 'Cyberpunk Suit ⚡', value: 'cyberpunk' },
+  { label: 'Royal Cape Fit 👑', value: 'royal' },
 ];
 
-const ACCESSORY_OPTIONS = [
-  { label: 'None', value: 'none', icon: '❌' },
-  { label: 'Glasses', value: 'glasses', icon: '👓' },
-  { label: 'Straw Hat', value: 'hat', icon: '👒' },
-  { label: 'Flower', value: 'flower', icon: '🌸' },
-  { label: 'Cat Ears', value: 'catEars', icon: '🐱' },
+const FOOTWEAR_OPTIONS = [
+  { label: 'Straw Sandals (Luffy Ref) 🩴', value: 'sandals' },
+  { label: 'Pirate Leather Boots 👢', value: 'pirate_boots' },
+  { label: 'Combat Boots 🥾', value: 'boots' },
+  { label: 'High Sneakers 👟', value: 'sneakers' },
+  { label: 'Barefoot 🦶', value: 'barefoot' },
 ];
+
+const BACK_ITEMS = [
+  { label: '3 Katanas (Zoro Ref) ⚔️', value: 'zoro_3swords' },
+  { label: 'Black Blade Yoru (Mihawk Ref) 🗡️', value: 'mihawk_yoru' },
+  { label: 'Angel Wings 🪽', value: 'angel_wings' },
+  { label: 'Demon Wings 🦇', value: 'demon_wings' },
+  { label: 'Aegis Shield 🛡️', value: 'shield' },
+  { label: 'Companion Cat 🐱', value: 'pet_cat' },
+  { label: 'Royal Cape 🦸', value: 'cape' },
+  { label: 'None ❌', value: 'none' },
+];
+
+const COLOR_PALETTE = ['#D63031', '#6C5CE7', '#FF7675', '#55E6C1', '#FDCB6E', '#74B9FF', '#2D3436', '#E17055', '#4834D4'];
 
 export const AvatarModal: React.FC<AvatarModalProps> = ({
   isOpen,
@@ -63,25 +79,29 @@ export const AvatarModal: React.FC<AvatarModalProps> = ({
   onSaveAvatar,
 }) => {
   const [draft, setDraft] = useState<AvatarState>(avatar);
-  const [activeTab, setActiveTab] = useState<'title' | 'hair' | 'skin' | 'outfit' | 'accessory'>('title');
+  const [activeTab, setActiveTab] = useState<'title' | 'head' | 'face' | 'hair' | 'outfit' | 'footwear' | 'back'>('title');
 
   if (!isOpen) return null;
 
   const handleRandomize = () => {
     sounds.playPop();
-    const randomSkin = SKIN_OPTIONS[Math.floor(Math.random() * SKIN_OPTIONS.length)].value;
-    const randomStyle = HAIR_STYLE_OPTIONS[Math.floor(Math.random() * HAIR_STYLE_OPTIONS.length)].value;
-    const randomHairColor = HAIR_COLOR_OPTIONS[Math.floor(Math.random() * HAIR_COLOR_OPTIONS.length)].value;
-    const randomOutfit = OUTFIT_COLOR_OPTIONS[Math.floor(Math.random() * OUTFIT_COLOR_OPTIONS.length)].value;
-    const randomAccessory = ACCESSORY_OPTIONS[Math.floor(Math.random() * ACCESSORY_OPTIONS.length)].value;
+    const randomHead = HEAD_ITEMS[Math.floor(Math.random() * HEAD_ITEMS.length)].value;
+    const randomFace = FACE_ITEMS[Math.floor(Math.random() * FACE_ITEMS.length)].value;
+    const randomHair = HAIR_STYLES[Math.floor(Math.random() * HAIR_STYLES.length)].value;
+    const randomHairColor = COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)];
+    const randomOutfit = OUTFIT_OPTIONS[Math.floor(Math.random() * OUTFIT_OPTIONS.length)].value;
+    const randomTopColor = COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)];
+    const randomBack = BACK_ITEMS[Math.floor(Math.random() * BACK_ITEMS.length)].value;
 
     setDraft((prev) => ({
       ...prev,
-      skinColor: randomSkin,
-      hairStyle: randomStyle,
+      headItem: randomHead,
+      faceItem: randomFace,
+      hairStyle: randomHair,
       hairColor: randomHairColor,
-      outfitColor: randomOutfit,
-      accessory: randomAccessory,
+      outfit: randomOutfit,
+      topColor: randomTopColor,
+      backItem: randomBack,
     }));
   };
 
@@ -93,107 +113,147 @@ export const AvatarModal: React.FC<AvatarModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-pop-in">
-      <div className="card-cozy w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="card-cozy w-full max-w-xl overflow-hidden flex flex-col max-h-[92vh] bg-[#FAF6EE] dark:bg-slate-900 text-slate-800 dark:text-slate-100">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 bg-amber-100 border-b-4 border-slate-800">
+        <div className="flex items-center justify-between p-4 bg-amber-100 dark:bg-slate-800 border-b-4 border-slate-800 dark:border-indigo-500/40">
           <div className="flex items-center gap-2">
             <Sparkles className="w-6 h-6 text-amber-500 fill-amber-300" />
-            <h2 className="text-xl font-bold text-slate-800">Avatar Studio & Profile</h2>
+            <h2 className="text-xl font-black">Pirate Wardrobe Studio</h2>
           </div>
           <button
             onClick={() => {
               sounds.playPop();
               onClose();
             }}
-            className="p-1.5 rounded-full hover:bg-amber-200 text-slate-800 transition-colors"
+            className="p-1.5 rounded-full hover:bg-amber-200 dark:hover:bg-slate-700 transition-colors"
           >
             <X className="w-6 h-6" />
           </button>
         </div>
 
-        {/* Content Container */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-[#FAF6EE]">
-          {/* Avatar Preview Card */}
-          <div className="flex flex-col items-center justify-center p-6 bg-white border-4 border-slate-800 rounded-2xl shadow-chunky relative">
-            <AvatarRenderer avatar={draft} size={130} animate={true} />
+        {/* Content Body */}
+        <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-[#FAF6EE] dark:bg-slate-950">
+          {/* Live Preview Card */}
+          <div className="flex flex-col items-center justify-center p-6 bg-white dark:bg-slate-900 border-4 border-slate-800 dark:border-indigo-500/40 rounded-2xl shadow-chunky relative">
+            <FullBodyAvatarRenderer avatar={draft} size={190} animate={true} />
             <div className="mt-2 text-center">
-              <h3 className="text-base font-black text-slate-900">{draft.userName}</h3>
-              <span className="bg-amber-300 text-slate-900 border border-slate-800 text-xs font-extrabold px-2.5 py-0.5 rounded-lg inline-block mt-0.5">
-                👑 {draft.equippedTitle}
+              <span className="bg-amber-300 dark:bg-indigo-600 text-slate-900 dark:text-white border border-slate-800 dark:border-indigo-400 text-xs font-black px-3 py-0.5 rounded-lg inline-block shadow-chunky-sm">
+                🏴‍☠️ {draft.equippedTitle}
               </span>
             </div>
             <button
               onClick={handleRandomize}
-              className="mt-3 btn-tactile-sm bg-amber-200 px-3 py-1.5 text-xs font-bold text-slate-800 flex items-center gap-1.5"
+              className="mt-3 btn-tactile-sm bg-amber-200 dark:bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5"
             >
-              <Shuffle className="w-3.5 h-3.5" /> Randomize Appearance
+              <Shuffle className="w-3.5 h-3.5" /> Randomize Outfit
             </button>
           </div>
 
           {/* Navigation Tabs */}
-          <div className="flex gap-1.5 border-b-4 border-slate-800 pb-2 overflow-x-auto">
-            {(['title', 'hair', 'skin', 'outfit', 'accessory'] as const).map((tab) => (
+          <div className="flex gap-1.5 border-b-4 border-slate-800 dark:border-indigo-500/40 pb-2 overflow-x-auto">
+            {(['title', 'head', 'face', 'hair', 'outfit', 'footwear', 'back'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => {
                   sounds.playPop();
                   setActiveTab(tab);
                 }}
-                className={`px-3 py-1.5 text-xs font-bold capitalize rounded-xl transition-all border-2 border-slate-800 ${
+                className={`px-3 py-1.5 text-xs font-bold capitalize rounded-xl transition-all border-2 border-slate-800 dark:border-slate-700 flex-shrink-0 ${
                   activeTab === tab
-                    ? 'bg-amber-300 shadow-chunky-sm translate-y-[-2px]'
-                    : 'bg-white hover:bg-amber-50 text-slate-600'
+                    ? 'bg-amber-300 dark:bg-indigo-600 text-slate-900 dark:text-white shadow-chunky-sm translate-y-[-2px]'
+                    : 'bg-white dark:bg-slate-800 hover:bg-amber-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'
                 }`}
               >
-                {tab === 'title' && '👑 Profile & Title'}
+                {tab === 'title' && '👑 Title'}
+                {tab === 'head' && '👒 Head'}
+                {tab === 'face' && '👁️ Face'}
                 {tab === 'hair' && '💇 Hair'}
-                {tab === 'skin' && '🎨 Skin'}
-                {tab === 'outfit' && '👕 Clothes'}
-                {tab === 'accessory' && '✨ Extra'}
+                {tab === 'outfit' && '👕 Outfit'}
+                {tab === 'footwear' && '🩴 Shoes'}
+                {tab === 'back' && '⚔️ Back Gear'}
               </button>
             ))}
           </div>
 
-          {/* Tab Content */}
+          {/* Tab Options */}
           <div className="space-y-4">
-            {/* TITLE & PROFILE TAB */}
+            {/* TITLE TAB */}
             {activeTab === 'title' && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2 flex items-center gap-1">
-                    <User className="w-3.5 h-3.5 text-indigo-500" /> Adventurer Name
-                  </label>
-                  <input
-                    type="text"
-                    value={draft.userName}
-                    onChange={(e) => setDraft({ ...draft, userName: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl border-3 border-slate-800 bg-white font-bold text-slate-900 focus:outline-none focus:ring-4 focus:ring-amber-200"
-                    maxLength={30}
-                  />
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wide mb-2 flex items-center gap-1">
+                  <Crown className="w-3.5 h-3.5 text-amber-500" /> Equip Guild Title
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {AVAILABLE_TITLES.map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => {
+                        sounds.playPop();
+                        setDraft({ ...draft, equippedTitle: t });
+                      }}
+                      className={`p-2.5 rounded-xl text-xs font-bold border-2 border-slate-800 transition-all ${
+                        draft.equippedTitle === t
+                          ? 'bg-amber-300 dark:bg-indigo-600 text-slate-900 dark:text-white shadow-chunky-sm'
+                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      🏴‍☠️ {t}
+                    </button>
+                  ))}
                 </div>
+              </div>
+            )}
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-2 flex items-center gap-1">
-                    <Crown className="w-3.5 h-3.5 text-amber-500" /> Equip RPG Title
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {AVAILABLE_TITLES.map((title) => (
-                      <button
-                        key={title}
-                        onClick={() => {
-                          sounds.playPop();
-                          setDraft({ ...draft, equippedTitle: title });
-                        }}
-                        className={`p-2.5 rounded-xl text-xs font-bold border-2 border-slate-800 transition-all ${
-                          draft.equippedTitle === title
-                            ? 'bg-amber-300 text-slate-900 shadow-chunky-sm'
-                            : 'bg-white hover:bg-amber-50 text-slate-700'
-                        }`}
-                      >
-                        👑 {title}
-                      </button>
-                    ))}
-                  </div>
+            {/* HEAD TAB */}
+            {activeTab === 'head' && (
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wide mb-2">
+                  Head Items & Pirate Hats
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {HEAD_ITEMS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => {
+                        sounds.playPop();
+                        setDraft({ ...draft, headItem: opt.value });
+                      }}
+                      className={`p-2.5 rounded-xl text-xs font-bold border-2 border-slate-800 transition-all ${
+                        draft.headItem === opt.value
+                          ? 'bg-indigo-500 text-white shadow-chunky-sm'
+                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* FACE TAB */}
+            {activeTab === 'face' && (
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wide mb-2">
+                  Facial Eyewear & Scars
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {FACE_ITEMS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => {
+                        sounds.playPop();
+                        setDraft({ ...draft, faceItem: opt.value });
+                      }}
+                      className={`p-2.5 rounded-xl text-xs font-bold border-2 border-slate-800 transition-all ${
+                        draft.faceItem === opt.value
+                          ? 'bg-emerald-400 text-slate-900 shadow-chunky-sm'
+                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
@@ -202,11 +262,11 @@ export const AvatarModal: React.FC<AvatarModalProps> = ({
             {activeTab === 'hair' && (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-2">
-                    Hair Style
+                  <label className="block text-xs font-bold uppercase tracking-wide mb-2">
+                    Hairstyle
                   </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {HAIR_STYLE_OPTIONS.map((opt) => (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {HAIR_STYLES.map((opt) => (
                       <button
                         key={opt.value}
                         onClick={() => {
@@ -215,8 +275,8 @@ export const AvatarModal: React.FC<AvatarModalProps> = ({
                         }}
                         className={`p-2 rounded-xl text-xs font-bold border-2 border-slate-800 transition-all ${
                           draft.hairStyle === opt.value
-                            ? 'bg-indigo-400 text-white shadow-chunky-sm'
-                            : 'bg-white hover:bg-indigo-50 text-slate-700'
+                            ? 'bg-indigo-500 text-white shadow-chunky-sm'
+                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                         }`}
                       >
                         {opt.label}
@@ -226,116 +286,121 @@ export const AvatarModal: React.FC<AvatarModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-2">
-                    Hair Color
+                  <label className="block text-xs font-bold uppercase tracking-wide mb-2">
+                    Hair Color Palette
                   </label>
                   <div className="flex flex-wrap gap-2.5">
-                    {HAIR_COLOR_OPTIONS.map((opt) => (
+                    {COLOR_PALETTE.map((c) => (
                       <button
-                        key={opt.value}
+                        key={c}
                         onClick={() => {
                           sounds.playPop();
-                          setDraft({ ...draft, hairColor: opt.value });
+                          setDraft({ ...draft, hairColor: c });
                         }}
-                        className={`w-9 h-9 rounded-full border-3 border-slate-800 flex items-center justify-center transition-transform ${
-                          draft.hairColor === opt.value ? 'scale-110 ring-4 ring-indigo-300' : 'hover:scale-105'
-                        }`}
-                        style={{ backgroundColor: opt.value }}
-                        title={opt.label}
-                      >
-                        {draft.hairColor === opt.value && (
-                          <Check className="w-5 h-5 text-white drop-shadow-md" />
-                        )}
-                      </button>
+                        className="w-8 h-8 rounded-full border-2 border-slate-800 shadow-chunky-sm hover:scale-110 transition-transform"
+                        style={{ backgroundColor: c }}
+                      />
                     ))}
                   </div>
                 </div>
               </div>
             )}
 
-            {/* SKIN TAB */}
-            {activeTab === 'skin' && (
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-2">
-                  Skin Tone
-                </label>
-                <div className="grid grid-cols-2 gap-2.5">
-                  {SKIN_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => {
-                        sounds.playPop();
-                        setDraft({ ...draft, skinColor: opt.value });
-                      }}
-                      className={`p-2.5 rounded-xl text-xs font-bold border-2 border-slate-800 flex items-center gap-2 transition-all ${
-                        draft.skinColor === opt.value
-                          ? 'bg-amber-200 shadow-chunky-sm'
-                          : 'bg-white hover:bg-amber-50'
-                      }`}
-                    >
-                      <span
-                        className="w-6 h-6 rounded-full border-2 border-slate-800"
-                        style={{ backgroundColor: opt.value }}
-                      />
-                      <span className="text-slate-800">{opt.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* OUTFIT TAB */}
             {activeTab === 'outfit' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wide mb-2">
+                    Torso Outfit
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {OUTFIT_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => {
+                          sounds.playPop();
+                          setDraft({ ...draft, outfit: opt.value });
+                        }}
+                        className={`p-2.5 rounded-xl text-xs font-bold border-2 border-slate-800 transition-all ${
+                          draft.outfit === opt.value
+                            ? 'bg-indigo-500 text-white shadow-chunky-sm'
+                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wide mb-2">
+                    Top Color
+                  </label>
+                  <div className="flex flex-wrap gap-2.5">
+                    {COLOR_PALETTE.map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => {
+                          sounds.playPop();
+                          setDraft({ ...draft, topColor: c });
+                        }}
+                        className="w-8 h-8 rounded-full border-2 border-slate-800 shadow-chunky-sm hover:scale-110 transition-transform"
+                        style={{ backgroundColor: c }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* FOOTWEAR TAB */}
+            {activeTab === 'footwear' && (
               <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-2">
-                  Outfit Color
+                <label className="block text-xs font-bold uppercase tracking-wide mb-2">
+                  Footwear & Sandals
                 </label>
-                <div className="grid grid-cols-3 gap-2.5">
-                  {OUTFIT_COLOR_OPTIONS.map((opt) => (
+                <div className="grid grid-cols-2 gap-2">
+                  {FOOTWEAR_OPTIONS.map((opt) => (
                     <button
                       key={opt.value}
                       onClick={() => {
                         sounds.playPop();
-                        setDraft({ ...draft, outfitColor: opt.value });
+                        setDraft({ ...draft, footwear: opt.value });
                       }}
-                      className={`p-2.5 rounded-xl text-xs font-bold border-2 border-slate-800 flex items-center gap-2 transition-all ${
-                        draft.outfitColor === opt.value
-                          ? 'bg-slate-800 text-white shadow-chunky-sm'
-                          : 'bg-white hover:bg-slate-50 text-slate-700'
+                      className={`p-2.5 rounded-xl text-xs font-bold border-2 border-slate-800 transition-all ${
+                        draft.footwear === opt.value
+                          ? 'bg-rose-400 text-slate-900 shadow-chunky-sm'
+                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                       }`}
                     >
-                      <span
-                        className="w-5 h-5 rounded-full border border-slate-800"
-                        style={{ backgroundColor: opt.value }}
-                      />
-                      <span>{opt.label}</span>
+                      {opt.label}
                     </button>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* ACCESSORY TAB */}
-            {activeTab === 'accessory' && (
+            {/* BACK TAB */}
+            {activeTab === 'back' && (
               <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-2">
-                  Head Accessories
+                <label className="block text-xs font-bold uppercase tracking-wide mb-2">
+                  Back Equipment & Katanas
                 </label>
                 <div className="grid grid-cols-2 gap-2.5">
-                  {ACCESSORY_OPTIONS.map((opt) => (
+                  {BACK_ITEMS.map((opt) => (
                     <button
                       key={opt.value}
                       onClick={() => {
                         sounds.playPop();
-                        setDraft({ ...draft, accessory: opt.value });
+                        setDraft({ ...draft, backItem: opt.value });
                       }}
                       className={`p-3 rounded-xl text-xs font-bold border-2 border-slate-800 flex items-center gap-2 transition-all ${
-                        draft.accessory === opt.value
+                        draft.backItem === opt.value
                           ? 'bg-emerald-300 text-slate-900 shadow-chunky-sm'
-                          : 'bg-white hover:bg-emerald-50 text-slate-700'
+                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                       }`}
                     >
-                      <span className="text-lg">{opt.icon}</span>
                       <span>{opt.label}</span>
                     </button>
                   ))}
@@ -346,21 +411,21 @@ export const AvatarModal: React.FC<AvatarModalProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 bg-amber-100 border-t-4 border-slate-800 flex items-center justify-between">
+        <div className="p-4 bg-amber-100 dark:bg-slate-800 border-t-4 border-slate-800 dark:border-indigo-500/40 flex items-center justify-between">
           <button
             onClick={() => {
               sounds.playPop();
               onClose();
             }}
-            className="btn-tactile bg-white hover:bg-slate-100 px-4 py-2 text-sm font-bold text-slate-700"
+            className="btn-tactile bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2 text-sm font-bold"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className="btn-tactile bg-emerald-400 hover:bg-emerald-500 px-6 py-2 text-sm font-bold text-slate-900 flex items-center gap-2"
+            className="btn-tactile bg-emerald-400 hover:bg-emerald-500 text-slate-900 font-bold px-6 py-2 text-sm flex items-center gap-2"
           >
-            <Check className="w-4 h-4" /> Save Profile & Title
+            <Check className="w-4 h-4" /> Save Pirate Avatar
           </button>
         </div>
       </div>

@@ -2,68 +2,80 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  body {
-    background-color: #FAF6EE;
-    background-image: radial-gradient(#E2D9C8 1px, transparent 1px);
-    background-size: 24px 24px;
+@layer utilities {
+  .border-3 {
+    border-width: 3px;
+  }
+
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+
+  .shadow-chunky {
+    box-shadow: 4px 4px 0px 0px rgba(30, 41, 59, 1);
+  }
+  
+  .shadow-chunky-lg {
+    box-shadow: 6px 6px 0px 0px rgba(30, 41, 59, 1);
+  }
+  
+  .shadow-chunky-sm {
+    box-shadow: 2px 2px 0px 0px rgba(30, 41, 59, 1);
+  }
+
+  .btn-tactile {
+    @apply border-3 border-slate-800 rounded-2xl shadow-chunky active:translate-y-1 active:shadow-none transition-all duration-150 cursor-pointer select-none;
+  }
+  
+  .btn-tactile-sm {
+    @apply border-2 border-slate-800 rounded-xl shadow-chunky-sm active:translate-y-0.5 active:shadow-none transition-all duration-150 cursor-pointer select-none;
+  }
+
+  .card-cozy {
+    @apply rounded-3xl border-4 border-slate-800 shadow-chunky transition-all duration-200;
   }
 }
 
-/* Custom cozy scrollbar */
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+/* Cozy Custom Animations */
+@keyframes wobble {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-3deg); }
+  75% { transform: rotate(3deg); }
 }
 
-::-webkit-scrollbar-track {
-  background: #F1ECE1;
-  border-radius: 9999px;
+@keyframes pulseGlow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.05); }
 }
 
-::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
-  border: 2px solid #1E293B;
-  border-radius: 9999px;
+@keyframes bounceSubtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+@keyframes popIn {
+  0% { transform: scale(0.92); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
-/* Tactile button custom utility */
-.btn-tactile {
-  border-width: 4px;
-  border-color: #1E293B;
-  border-radius: 1rem;
-  box-shadow: 0px 4px 0px 0px #1E293B;
-  transition: all 0.1s ease;
-  cursor: pointer;
+.animate-wobble {
+  animation: wobble 2s ease-in-out infinite;
 }
 
-.btn-tactile:active {
-  transform: translateY(4px);
-  box-shadow: 0px 0px 0px 0px #1E293B;
+.animate-pulse-glow {
+  animation: pulseGlow 2s ease-in-out infinite;
 }
 
-.btn-tactile-sm {
-  border-width: 3px;
-  border-color: #1E293B;
-  border-radius: 0.75rem;
-  box-shadow: 0px 3px 0px 0px #1E293B;
-  transition: all 0.1s ease;
-  cursor: pointer;
+.animate-bounce-subtle {
+  animation: bounceSubtle 1.5s ease-in-out infinite;
 }
 
-.btn-tactile-sm:active {
-  transform: translateY(3px);
-  box-shadow: 0px 0px 0px 0px #1E293B;
-}
-
-.card-cozy {
-  border-width: 4px;
-  border-color: #1E293B;
-  border-radius: 1.5rem;
-  background-color: #FFFFFF;
-  box-shadow: 4px 4px 0px 0px rgba(30, 41, 59, 1);
+.animate-pop-in {
+  animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }

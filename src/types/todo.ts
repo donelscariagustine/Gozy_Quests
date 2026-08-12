@@ -1,45 +1,43 @@
-export type QuestCategory = 'coding' | 'workout' | 'work' | 'study' | 'chores' | 'creative';
+export interface UserSettings {
+  theme: 'light' | 'dark';
+  soundEnabled: boolean;
+  volume: number; // 0 to 100
+}
 
-export interface AvatarTrait {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  requiredLevel: number;
-  unlocked: boolean;
-  effect: string; // e.g. "+10% XP on Coding Quests"
-  categoryBonus?: QuestCategory;
-  multiplier: number; // e.g. 0.1 for +10%
+export interface UserProfile {
+  username: string;
+  primaryClass: 'coding' | 'workout' | 'work' | 'study';
+  isLoggedIn: boolean;
 }
 
 export interface AvatarState {
-  userName: string;
-  userAgeRank: string;
-  skinColor: string;
-  hairStyle: string;
+  skinTone: string;
+  hairStyle: string;     // 'shanks_flow' | 'spiky' | 'short' | 'long' | 'bun' | 'afro' | 'braids'
   hairColor: string;
-  outfitColor: string;
-  accessory: string;
-  equippedTitle: string; // e.g., "Novice Adventurer", "Code Wizard", "Fitness Titan"
+  eyesStyle: string;
+  headItem: string;      // 'straw_hat' | 'pirate_bicorne' | 'wizard_hat' | 'crown' | 'headphones' | 'viking' | 'bunny_ears' | 'none'
+  faceItem: string;      // 'zoro_eyepatch' | 'glasses' | 'goggles' | 'eyepatch' | 'monocle' | 'mask' | 'bandana' | 'none'
+  outfit: string;        // 'pirate_captain' | 'gym' | 'armor' | 'hoodie' | 'cyberpunk' | 'royal'
+  topColor: string;
+  bottomStyle: string;   // 'pants' | 'shorts' | 'skirt' | 'robe_bottom' | 'greaves'
+  bottomColor: string;
+  footwear: string;      // 'sandals' | 'pirate_boots' | 'boots' | 'sneakers' | 'barefoot' | 'greaves'
+  backItem: string;      // 'zoro_3swords' | 'mihawk_yoru' | 'angel_wings' | 'demon_wings' | 'shield' | 'pet_cat' | 'cape' | 'none'
+  equippedTitle: string; // e.g., "Pirate King", "Greatest Swordsman"
 }
 
-export interface Quest {
+export interface CustomCategory {
   id: string;
-  title: string;
-  category: QuestCategory;
-  difficulty: 'easy' | 'medium' | 'hard'; // Easy=10XP, Medium=25XP, Hard=50XP
-  estimatedMinutes: number;              // Target focus duration
-  status: 'idle' | 'in_progress' | 'completed';
-  timeSpentSeconds: number;
-  createdAt: string;
-  completedAt?: string;
+  name: string;
+  colorHex: string;
+  icon: string;
 }
 
-export interface Challenge {
+export interface CategoryChallenge {
   id: string;
   title: string;
   description: string;
-  category?: QuestCategory;
+  categoryId: string; // references built-in or custom category ID
   type: 'daily' | 'boss';
   targetCount: number;
   currentCount: number;
@@ -47,6 +45,20 @@ export interface Challenge {
   expiresAt: string;
   completed: boolean;
   bossIcon?: string;
+}
+
+export interface Quest {
+  id: string;
+  title: string;
+  categoryId: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  estimatedMinutes: number;
+  hasCustomDeadline: boolean;
+  dueDateTime: string | null;
+  status: 'idle' | 'in_progress' | 'completed' | 'failed';
+  timeSpentSeconds: number;
+  createdAt: string;
+  completedAt?: string;
 }
 
 export interface Achievement {
@@ -58,18 +70,33 @@ export interface Achievement {
   unlocked: boolean;
   progress: number;
   maxProgress: number;
-  category?: QuestCategory | 'general';
+  categoryId?: string;
   unlockedAt?: string;
 }
 
+export interface AvatarTrait {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  requiredLevel: number;
+  unlocked: boolean;
+  effect: string;
+  categoryBonus?: string;
+  multiplier: number;
+}
+
 export interface AppState {
+  user: UserProfile;
+  settings: UserSettings;
   avatar: AvatarState;
+  customCategories: CustomCategory[];
   xp: number;
   streak: number;
   lastCompletedDate: string | null;
   activeQuestId: string | null;
   quests: Quest[];
-  challenges: Challenge[];
+  challenges: CategoryChallenge[];
   achievements: Achievement[];
   traits: AvatarTrait[];
 }
