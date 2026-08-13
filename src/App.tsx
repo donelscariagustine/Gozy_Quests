@@ -628,6 +628,17 @@ export function App() {
     }));
   };
 
+  const handleCancelQuest = (id: string) => {
+    setIsTimerPaused(false);
+    setState((prev) => ({
+      ...prev,
+      activeQuestId: prev.activeQuestId === id ? null : prev.activeQuestId,
+      quests: prev.quests.map((q) =>
+        q.id === id ? { ...q, status: 'idle', timeSpentSeconds: 0 } : q
+      ),
+    }));
+  };
+
   // OVERHAULED: Standard Quests award 0 direct XP!
   const handleFinishQuest = (id: string) => {
     const quest = state.quests.find((q) => q.id === id);
@@ -829,7 +840,7 @@ export function App() {
       className={
         isDark
           ? 'dark min-h-screen w-full bg-[#050811] text-slate-100 transition-colors duration-200'
-          : 'min-h-screen w-full bg-[#FAF6EE] text-slate-900 transition-colors duration-200'
+          : 'min-h-screen w-full bg-[#fffbeb] text-slate-900 transition-colors duration-200'
       }
     >
       {/* Top Header Bar Spanning Full max-w-7xl Width */}
@@ -864,9 +875,9 @@ export function App() {
                   quest={activeQuestObj}
                   isPaused={isTimerPaused}
                   streak={state.streak}
-                  traits={state.traits}
                   onPauseResume={() => setIsTimerPaused(!isTimerPaused)}
                   onFinishQuest={handleFinishQuest}
+                  onCancelQuest={handleCancelQuest}
                 />
               )}
 
@@ -880,6 +891,7 @@ export function App() {
                 onOpenAddQuestModal={() => setIsAddQuestModalOpen(true)}
                 onStartQuest={handleStartQuest}
                 onFinishQuest={handleFinishQuest}
+                onCancelQuest={handleCancelQuest}
                 onDeleteQuest={handleDeleteQuest}
                 onClearCompleted={handleClearCompleted}
               />
