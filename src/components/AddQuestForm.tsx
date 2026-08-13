@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CustomCategory } from '../types/todo';
-import { BUILTIN_CATEGORIES, DIFFICULTY_XP } from '../utils/gameEngine';
-import { X, Sparkles, Plus, Clock, Target, Layers, Calendar, Settings } from 'lucide-react';
+import { BUILTIN_CATEGORIES } from '../utils/gameEngine';
+import { X, Sparkles, Plus, Clock, Target, Layers, Calendar } from 'lucide-react';
 import { sounds } from '../utils/audio';
 
 interface AddQuestFormProps {
@@ -12,7 +12,6 @@ interface AddQuestFormProps {
   onAddQuest: (
     title: string,
     categoryId: string,
-    difficulty: 'easy' | 'medium' | 'hard',
     estimatedMinutes: number,
     hasCustomDeadline: boolean,
     dueDateTime: string | null
@@ -30,34 +29,46 @@ export const AddQuestForm: React.FC<AddQuestFormProps> = ({
 }) => {
   const [title, setTitle] = useState('');
   const [categoryId, setCategoryId] = useState<string>('coding');
-  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [estimatedMinutes, setEstimatedMinutes] = useState<number>(25);
 
-  // Gated Custom Deadline & Time state
-  const [showCustomControls, setShowCustomControls] = useState<boolean>(false);
-  const [customMinutes, setCustomMinutes] = useState<number>(30);
+  // Trigger 1: Custom Focus Mins
+  const [showCustomMins, setShowCustomMins] = useState<boolean>(false);
+  // Trigger 2: Target Date & Time Deadline
+  const [showDateTimePicker, setShowDateTimePicker] = useState<boolean>(false);
   const [dueDateTime, setDueDateTime] = useState<string>('');
 
   if (!isOpen) return null;
+
+  // Compute dynamic estimated minutes when Target Date & Time changes
+  const handleDateTimeChange = (val: string) => {
+    setDueDateTime(val);
+    if (val) {
+      const dueMs = new Date(val).getTime();
+      const nowMs = Date.now();
+      const diffMins = Math.floor((dueMs - nowMs) / 60000);
+      const calculatedMins = Math.max(15, diffMins);
+      setEstimatedMinutes(calculatedMins);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
 
     sounds.playPop();
-    const finalMinutes = showCustomControls ? customMinutes : estimatedMinutes;
+    const hasCustom = showCustomMins || showDateTimePicker;
     onAddQuest(
       title.trim(),
       categoryId,
-      difficulty,
-      finalMinutes,
-      showCustomControls,
-      showCustomControls && dueDateTime ? dueDateTime : null
+      estimatedMinutes,
+      hasCustom,
+      showDateTimePicker && dueDateTime ? dueDateTime : null
     );
 
     setTitle('');
     setDueDateTime('');
-    setShowCustomControls(false);
+    setShowCustomMins(false);
+    setShowDateTimePicker(false);
     onClose();
   };
 
@@ -172,45 +183,18 @@ export const AddQuestForm: React.FC<AddQuestFormProps> = ({
             </div>
           </div>
 
-          {/* Difficulty Selector */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wide mb-2">
-              Difficulty & Reward
-            </label>
-            <div className="grid grid-cols-3 gap-2.5">
-              {(['easy', 'medium', 'hard'] as const).map((diff) => (
-                <button
-                  key={diff}
-                  type="button"
-                  onClick={() => {
-                    sounds.playPop();
-                    setDifficulty(diff);
-                  }}
-                  className={`p-2.5 rounded-2xl border-3 border-slate-800 dark:border-slate-700 text-xs font-black capitalize transition-all flex flex-col items-center gap-1 ${
-                    difficulty === diff
-                      ? diff === 'easy'
-                        ? 'bg-emerald-300 text-slate-900 shadow-chunky-sm translate-y-[-2px]'
-                        : diff === 'medium'
-                        ? 'bg-amber-300 text-slate-900 shadow-chunky-sm translate-y-[-2px]'
-                        : 'bg-rose-300 text-slate-900 shadow-chunky-sm translate-y-[-2px]'
-                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300'
-                  }`}
-                >
-                  <span>{diff}</span>
-                  <span className="text-[10px] font-extrabold text-slate-900 bg-white/80 px-2 py-0.5 rounded-lg border border-slate-800">
-                    +{DIFFICULTY_XP[diff]} XP
-                  </span>
-                </button>
-              ))}
+          {/* Focus Duration & Trigger 1: Custom Focus Mins */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold uppercase tracking-wide flex items-center gap-1.5">
+                <Clock className="w-4 h-4 text-emerald-500" /> Focus Duration
+              </label>
+              <span className="text-xs font-black text-indigo-600 dark:text-indigo-400">
+                {estimatedMinutes} mins
+              </span>
             </div>
-          </div>
 
-          {/* Quick Focus Timer Presets */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wide mb-2 flex items-center gap-1.5">
-              <Clock className="w-4 h-4 text-emerald-500" /> Focus Time Presets
-            </label>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="flex flex-wrap gap-2">
               {PRESET_TIMERS.map((mins) => (
                 <button
                   key={mins}
@@ -218,70 +202,82 @@ export const AddQuestForm: React.FC<AddQuestFormProps> = ({
                   onClick={() => {
                     sounds.playPop();
                     setEstimatedMinutes(mins);
+                    setShowCustomMins(false);
                   }}
-                  className={`py-2 px-2 rounded-xl text-xs font-black border-2 border-slate-800 dark:border-slate-700 transition-all ${
-                    !showCustomControls && estimatedMinutes === mins
-                      ? 'bg-indigo-500 text-white shadow-chunky-sm translate-y-[-2px]'
-                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                  className={`rounded-xl px-3.5 py-2 text-xs font-bold border-2 border-slate-800 dark:border-slate-700 transition-all ${
+                    estimatedMinutes === mins && !showCustomMins
+                      ? 'bg-indigo-600 text-white shadow-chunky-sm'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200'
                   }`}
                 >
-                  ⏱️ {mins}m
+                  {mins}m
                 </button>
               ))}
+
+              {/* BUTTON 1: Custom Focus Mins */}
+              <button
+                type="button"
+                onClick={() => {
+                  sounds.playPop();
+                  setShowCustomMins(!showCustomMins);
+                }}
+                className={`rounded-xl border-2 border-slate-800 px-3.5 py-2 text-xs font-bold transition-all shadow-chunky-sm ${
+                  showCustomMins
+                    ? 'bg-amber-400 text-slate-900'
+                    : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200'
+                }`}
+              >
+                ⏱️ {showCustomMins ? 'Hide Custom Mins' : 'Custom Mins'}
+              </button>
             </div>
+
+            {showCustomMins && (
+              <input
+                type="number"
+                min="1"
+                max="480"
+                value={estimatedMinutes}
+                onChange={(e) => setEstimatedMinutes(Number(e.target.value) || 25)}
+                placeholder="Enter minutes (e.g. 90)"
+                className="mt-2 w-full rounded-xl border-2 border-slate-800 p-2.5 text-sm font-bold bg-white dark:bg-slate-900 dark:text-white"
+              />
+            )}
           </div>
 
-          {/* Gated Custom Deadline & Timer Button */}
-          <div className="pt-1 border-t-2 border-slate-200 dark:border-slate-800">
+          {/* BUTTON 2: Custom Date & Time Deadline with Dynamic Focus Calculation */}
+          <div className="space-y-2 pt-2 border-t-2 border-slate-200 dark:border-slate-800">
             <button
               type="button"
               onClick={() => {
                 sounds.playPop();
-                setShowCustomControls(!showCustomControls);
+                setShowDateTimePicker(!showDateTimePicker);
               }}
-              className={`w-full py-2.5 px-4 rounded-2xl border-2 border-slate-800 dark:border-slate-700 text-xs font-black flex items-center justify-between transition-colors ${
-                showCustomControls
-                  ? 'bg-indigo-100 dark:bg-slate-800 text-indigo-900 dark:text-indigo-200'
-                  : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50'
+              className={`w-full rounded-xl border-2 border-slate-800 py-2.5 px-3 text-xs font-extrabold transition-all shadow-chunky-sm flex items-center justify-between ${
+                showDateTimePicker
+                  ? 'bg-emerald-400 text-slate-900'
+                  : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-50'
               }`}
             >
-              <span className="flex items-center gap-2">
-                <Settings className="w-4 h-4 text-indigo-500" />
-                <span>⚙️ Customize Deadline & Time</span>
+              <span className="flex items-center gap-1.5">
+                <Calendar className="w-4 h-4" />
+                <span>{showDateTimePicker ? '📅 Dynamic Target Deadline Active' : '📅 Set Target Date & Time'}</span>
               </span>
-              <span className="text-[10px] font-bold uppercase bg-white dark:bg-slate-900 px-2 py-0.5 rounded-lg border border-slate-400">
-                {showCustomControls ? 'Hide Options' : 'Expand'}
+              <span className="text-[10px] uppercase bg-white dark:bg-slate-900 px-2 py-0.5 rounded-md border border-slate-800">
+                {showDateTimePicker ? 'Clear' : 'Set Date'}
               </span>
             </button>
 
-            {/* Gated Custom Inputs */}
-            {showCustomControls && (
-              <div className="mt-3 p-4 bg-amber-50/60 dark:bg-slate-800/60 border-2 border-slate-800 dark:border-indigo-500/40 rounded-2xl space-y-4 animate-pop-in">
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wide mb-1 flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5 text-indigo-500" /> Custom Focus Minutes
-                  </label>
-                  <input
-                    type="number"
-                    min="5"
-                    max="300"
-                    value={customMinutes}
-                    onChange={(e) => setCustomMinutes(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-xl border-2 border-slate-800 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold text-xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wide mb-1 flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-rose-500" /> Target Due Date & Time
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={dueDateTime}
-                    onChange={(e) => setDueDateTime(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border-2 border-slate-800 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold text-xs"
-                  />
-                </div>
+            {showDateTimePicker && (
+              <div className="space-y-1 mt-2">
+                <input
+                  type="datetime-local"
+                  value={dueDateTime}
+                  onChange={(e) => handleDateTimeChange(e.target.value)}
+                  className="w-full rounded-xl border-2 border-slate-800 p-2.5 text-sm font-bold bg-white dark:bg-slate-900 dark:text-white"
+                />
+                <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                  ⚡ Focus time calculates automatically based on time remaining ({estimatedMinutes} mins).
+                </p>
               </div>
             )}
           </div>

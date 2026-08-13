@@ -1,3 +1,6 @@
+export type CharacterClass = 'coding' | 'workout' | 'work' | 'study';
+export type TodoType = 'strict_rpg' | 'casual_habits' | 'project_bosses';
+
 export interface UserSettings {
   theme: 'light' | 'dark';
   soundEnabled: boolean;
@@ -6,7 +9,10 @@ export interface UserSettings {
 
 export interface UserProfile {
   username: string;
-  primaryClass: 'coding' | 'workout' | 'work' | 'study';
+  email: string;
+  age: number;
+  primaryClass: CharacterClass;
+  todoType: TodoType;
   isLoggedIn: boolean;
 }
 
@@ -37,25 +43,24 @@ export interface CategoryChallenge {
   id: string;
   title: string;
   description: string;
-  categoryId: string; // references built-in or custom category ID
+  categoryId: CharacterClass;
   type: 'daily' | 'boss';
   targetCount: number;
   currentCount: number;
   rewardXp: number;
-  expiresAt: string;
   completed: boolean;
+  assignedWeekSeed: number;
   bossIcon?: string;
 }
 
 export interface Quest {
   id: string;
   title: string;
-  categoryId: string;
-  difficulty: 'easy' | 'medium' | 'hard';
+  categoryId: CharacterClass | string;
   estimatedMinutes: number;
   hasCustomDeadline: boolean;
   dueDateTime: string | null;
-  status: 'idle' | 'in_progress' | 'completed' | 'failed';
+  status: 'idle' | 'in_progress' | 'completed';
   timeSpentSeconds: number;
   createdAt: string;
   completedAt?: string;

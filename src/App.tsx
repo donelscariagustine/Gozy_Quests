@@ -1,18 +1,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import confetti from 'canvas-confetti';
-import { AppState, AvatarState, Quest, CategoryChallenge, Achievement, AvatarTrait, CustomCategory, UserSettings } from './types/todo';
+import { AppState, AvatarState, Quest, CategoryChallenge, Achievement, AvatarTrait, CustomCategory, UserSettings, CharacterClass, TodoType } from './types/todo';
 import {
   INITIAL_STATE,
   calculateLevel,
-  DIFFICULTY_XP,
   updateStreakOnCompletion,
-  calculateFinalXP,
   getTodayDateString,
-  getClassSpecificChallenges,
+  getWeeklyChallenges,
+  getClassInitialQuests,
+  TODO_TYPE_LABELS,
+  getXPProgress,
 } from './utils/gameEngine';
 import { AuthGatekeeper } from './components/AuthGatekeeper';
-import { HeaderBar } from './components/HeaderBar';
-import { ResponsiveNavBar, NavigationTab } from './components/ResponsiveNavBar';
+import { HeaderBar, ActiveTab, MainNavTab } from './components/HeaderBar';
+import { FullBodyAvatarRenderer } from './components/FullBodyAvatarRenderer';
 import { TaskBoard } from './components/TaskBoard';
 import { ActiveQuestBanner } from './components/ActiveQuestBanner';
 import { AddQuestForm } from './components/AddQuestForm';
@@ -24,7 +25,7 @@ import { AchievementCabinet } from './components/AchievementCabinet';
 import { SettingsModal } from './components/SettingsModal';
 import { LevelUpModal } from './components/LevelUpModal';
 import { sounds } from './utils/audio';
-import { RefreshCw, Heart } from 'lucide-react';
+import { Trophy, Zap, Flame, Crown, RefreshCw, Heart, Sparkles } from 'lucide-react';
 
 const STORAGE_KEY = 'gamified_todo_app_state';
 
@@ -66,19 +67,40 @@ const getInitialAppState = (): AppState => {
 };
 
 export function App() {
-  // Persistent State initialized safely
   const [state, setState] = useState<AppState>(getInitialAppState);
 
-  const [activeTab, setActiveTab] = useState<NavigationTab>('quests');
   const [isAddQuestModalOpen, setIsAddQuestModalOpen] = useState(false);
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<ActiveTab>('quests');
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [isAchievementsModalOpen, setIsAchievementsModalOpen] = useState(false);
   const [isSkillTreeModalOpen, setIsSkillTreeModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-
   const [isTimerPaused, setIsTimerPaused] = useState(false);
   const [levelUpLevel, setLevelUpLevel] = useState<number | null>(null);
+
+  const handleChangeClass = (newClass: CharacterClass) => {
+    const newChallenges = getWeeklyChallenges(newClass);
+    setState((prev) => ({
+      ...prev,
+      user: { ...prev.user, primaryClass: newClass },
+      challenges: newChallenges,
+    }));
+  };
+
+  const handleChangeStrategy = (newStrategy: TodoType) => {
+    const newQuests = getClassInitialQuests(state.user.primaryClass, newStrategy);
+    setState((prev) => ({
+      ...prev,
+      user: { ...prev.user, todoType: newStrategy },
+      quests: newQuests,
+    }));
+  };
+
+  const handleToggleTheme = () => {
+    const newTheme = state.settings.theme === 'dark' ? 'light' : 'dark';
+    handleUpdateSettings({ theme: newTheme });
+  };
 
   // Sync Audio Settings
   useEffect(() => {
@@ -90,8 +112,8 @@ export function App() {
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch {
-      // Storage save fallback
+    } catch (error) {
+      console.warn('Unable to save state to localStorage:', error);
     }
   }, [state]);
 
@@ -121,10 +143,7 @@ export function App() {
         const totalFocusMinutes = Math.floor(totalFocusSeconds / 60);
 
         const updatedChallenges = prev.challenges.map((c) => {
-          if (c.id === 'deep_focus') {
-            return { ...c, currentCount: Math.min(c.targetCount, totalFocusMinutes) };
-          }
-          if (c.id === 'boss_bug_leviathan') {
+          if (c.id.includes('focus') || c.id.includes('Kaido') || c.id.includes('Titan')) {
             return { ...c, currentCount: Math.min(c.targetCount, totalFocusMinutes) };
           }
           return c;
@@ -152,16 +171,29 @@ export function App() {
   };
 
   // Auth Handlers
-  const handleLogin = (username: string, primaryClass: 'coding' | 'workout' | 'work' | 'study') => {
+  const handleLogin = (
+    username: string,
+    email: string,
+    age: number,
+    primaryClass: CharacterClass,
+    todoType: TodoType
+  ) => {
     sounds.playLevelUp();
+    const initialQuests = getClassInitialQuests(primaryClass, todoType);
+    const weeklyChallenges = getWeeklyChallenges(primaryClass);
+
     setState((prev) => ({
       ...prev,
       user: {
         username,
+        email,
+        age,
         primaryClass,
+        todoType,
         isLoggedIn: true,
       },
-      challenges: getClassSpecificChallenges(primaryClass),
+      quests: initialQuests,
+      challenges: weeklyChallenges,
     }));
   };
 
@@ -171,6 +203,10 @@ export function App() {
       ...prev,
       user: {
         username: '',
+        email: '',
+        age: 20,
+        primaryClass: 'coding',
+        todoType: 'strict_rpg',
         isLoggedIn: false,
       },
     }));
@@ -210,6 +246,13 @@ export function App() {
       settings: { ...prev.settings, ...newSettings },
       xp: prev.xp + bonusXP,
       achievements: updatedAchievements,
+    }));
+  };
+
+  const handleUpdateTodoType = (todoType: TodoType) => {
+    setState((prev) => ({
+      ...prev,
+      user: { ...prev.user, todoType },
     }));
   };
 
@@ -531,7 +574,6 @@ export function App() {
   const handleAddQuest = (
     title: string,
     categoryId: string,
-    difficulty: 'easy' | 'medium' | 'hard',
     estimatedMinutes: number,
     hasCustomDeadline: boolean,
     dueDateTime: string | null
@@ -540,7 +582,6 @@ export function App() {
       id: 'quest-' + Date.now(),
       title,
       categoryId,
-      difficulty,
       estimatedMinutes,
       hasCustomDeadline,
       dueDateTime,
@@ -587,15 +628,13 @@ export function App() {
     }));
   };
 
+  // OVERHAULED: Standard Quests award 0 direct XP!
   const handleFinishQuest = (id: string) => {
     const quest = state.quests.find((q) => q.id === id);
     if (!quest) return;
 
     const nowIso = new Date().toISOString();
-    const { newStreak, newDate } = updateStreakOnCompletion(state.streak, state.lastCompletedDate);
-
-    const baseXP = DIFFICULTY_XP[quest.difficulty];
-    const { finalXP } = calculateFinalXP(baseXP, newStreak, quest.categoryId, state.traits);
+    const { newStreak, newDate, streakBonusXP } = updateStreakOnCompletion(state.streak, state.lastCompletedDate);
 
     const oldLevel = calculateLevel(state.xp);
     const completedQuestObj: Quest = { ...quest, status: 'completed' as const, completedAt: nowIso };
@@ -604,16 +643,7 @@ export function App() {
 
     // Update Boss & Daily Challenges
     const nextChallenges = state.challenges.map((c) => {
-      if (c.id === 'daily_code' && quest.categoryId === 'coding') {
-        return { ...c, currentCount: Math.min(c.targetCount, c.currentCount + 1) };
-      }
-      if (c.id === 'daily_workout' && quest.categoryId === 'workout') {
-        return { ...c, currentCount: Math.min(c.targetCount, c.currentCount + 1) };
-      }
-      if (c.id === 'boss_legday_colossus' && quest.categoryId === 'workout' && quest.difficulty === 'hard') {
-        return { ...c, currentCount: Math.min(c.targetCount, c.currentCount + 1) };
-      }
-      if (c.id === 'boss_procrastination_dragon' && (quest.categoryId === 'work' || quest.categoryId === 'study')) {
+      if (c.categoryId === quest.categoryId) {
         return { ...c, currentCount: Math.min(c.targetCount, c.currentCount + 1) };
       }
       return c;
@@ -628,7 +658,8 @@ export function App() {
       completedQuestObj
     );
 
-    const totalNewXP = state.xp + finalXP + bonusXP;
+    // XP IS EXCLUSIVELY STREAK MILESTONES OR CHALLENGE REWARDS
+    const totalNewXP = state.xp + streakBonusXP + bonusXP;
     const newLevel = calculateLevel(totalNewXP);
 
     const { updatedTraits } = evaluateTraits(
@@ -691,6 +722,7 @@ export function App() {
     setState((prev) => ({ ...prev, quests: nextQuests }));
   };
 
+  // EXCLUSIVE XP SOURCE: Claiming completed Daily & Boss Challenges!
   const handleClaimChallengeReward = (challengeId: string) => {
     const targetChallenge = state.challenges.find((c) => c.id === challengeId);
     if (!targetChallenge || targetChallenge.completed) return;
@@ -764,18 +796,6 @@ export function App() {
     }));
   };
 
-  const handleSelectTab = (tab: NavigationTab) => {
-    if (tab === 'settings') {
-      setIsSettingsModalOpen(true);
-    } else if (tab === 'avatar') {
-      setIsAvatarModalOpen(true);
-    } else if (tab === 'badges') {
-      setIsAchievementsModalOpen(true);
-    } else {
-      setActiveTab(tab);
-    }
-  };
-
   const handleResetData = () => {
     if (window.confirm('Reset all pirate quests, levels, and avatar state back to default?')) {
       sounds.playPop();
@@ -795,98 +815,265 @@ export function App() {
   );
 
   const currentLevel = useMemo(() => calculateLevel(state.xp), [state.xp]);
+  const xpInfo = useMemo(() => getXPProgress(state.xp), [state.xp]);
   const isDark = state.settings.theme === 'dark';
+  const todoInfo = TODO_TYPE_LABELS[state.user.todoType || 'strict_rpg'];
 
   // Auth Guard
   if (!state.user.isLoggedIn) {
-    return <AuthGatekeeper onLogin={(name, cls) => handleLogin(name, cls)} />;
+    return <AuthGatekeeper onLogin={handleLogin} />;
   }
 
   return (
     <div
-      className={`min-h-screen pb-20 md:pb-8 pt-6 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto flex flex-col justify-between transition-colors ${
-        isDark ? 'bg-slate-950 text-slate-100' : 'bg-[#FAF6EE] text-slate-800'
-      }`}
+      className={
+        isDark
+          ? 'dark min-h-screen w-full bg-[#050811] text-slate-100 transition-colors duration-200'
+          : 'min-h-screen w-full bg-[#FAF6EE] text-slate-900 transition-colors duration-200'
+      }
     >
-      <div>
-        {/* Active Focus Banner */}
-        {activeQuestObj && (
-          <ActiveQuestBanner
-            quest={activeQuestObj}
-            isPaused={isTimerPaused}
-            streak={state.streak}
-            traits={state.traits}
-            onPauseResume={() => setIsTimerPaused(!isTimerPaused)}
-            onFinishQuest={handleFinishQuest}
-          />
-        )}
+      {/* Top Header Bar Spanning Full max-w-7xl Width */}
+      <HeaderBar
+        user={state.user}
+        settings={state.settings}
+        avatar={state.avatar}
+        xp={state.xp}
+        streak={state.streak}
+        unlockedBadgesCount={unlockedBadgesCount}
+        totalBadgesCount={state.achievements.length}
+        traits={state.traits}
+        activeTab={activeTab}
+        onSelectTab={(tab) => setActiveTab(tab)}
+        onToggleTheme={handleToggleTheme}
+        onLogout={handleLogout}
+        onOpenAvatarModal={() => setIsAvatarModalOpen(true)}
+        onOpenAchievementsModal={() => setIsAchievementsModalOpen(true)}
+        onOpenSkillTreeModal={() => setIsSkillTreeModalOpen(true)}
+        onOpenSettingsModal={() => setIsSettingsModalOpen(true)}
+      />
 
-        {/* Header Bar */}
-        <HeaderBar
-          user={state.user}
-          settings={state.settings}
-          avatar={state.avatar}
-          xp={state.xp}
-          streak={state.streak}
-          unlockedBadgesCount={unlockedBadgesCount}
-          totalBadgesCount={state.achievements.length}
-          traits={state.traits}
-          onOpenAvatarModal={() => setIsAvatarModalOpen(true)}
-          onOpenAchievementsModal={() => setIsAchievementsModalOpen(true)}
-          onOpenSkillTreeModal={() => setIsSkillTreeModalOpen(true)}
-          onOpenSettingsModal={() => setIsSettingsModalOpen(true)}
-        />
-
-        {/* Responsive Desktop & Mobile Navigation Bar */}
-        <ResponsiveNavBar
-          activeTab={activeTab}
-          onSelectTab={handleSelectTab}
-          unlockedBadgesCount={unlockedBadgesCount}
-          totalBadgesCount={state.achievements.length}
-        />
-
-        {/* Content Tab Views */}
+      {/* Main Desktop Dashboard Container with Dedicated View Switcher */}
+      <main className="max-w-7xl mx-auto w-full p-4 md:p-6 lg:p-8">
         {activeTab === 'quests' && (
-          <TaskBoard
-            quests={state.quests}
-            activeQuestId={state.activeQuestId}
-            streak={state.streak}
-            traits={state.traits}
-            customCategories={state.customCategories}
-            onOpenAddQuestModal={() => setIsAddQuestModalOpen(true)}
-            onStartQuest={handleStartQuest}
-            onFinishQuest={handleFinishQuest}
-            onDeleteQuest={handleDeleteQuest}
-            onClearCompleted={handleClearCompleted}
-          />
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* MAIN COLUMN (Desktop: 8 cols) - Active Quest Focus & Main Quest Board */}
+            <div className="lg:col-span-8 space-y-6">
+              {/* Active Focus Banner */}
+              {activeQuestObj && (
+                <ActiveQuestBanner
+                  quest={activeQuestObj}
+                  isPaused={isTimerPaused}
+                  streak={state.streak}
+                  traits={state.traits}
+                  onPauseResume={() => setIsTimerPaused(!isTimerPaused)}
+                  onFinishQuest={handleFinishQuest}
+                />
+              )}
+
+              {/* Task Board */}
+              <TaskBoard
+                quests={state.quests}
+                activeQuestId={state.activeQuestId}
+                streak={state.streak}
+                traits={state.traits}
+                customCategories={state.customCategories}
+                onOpenAddQuestModal={() => setIsAddQuestModalOpen(true)}
+                onStartQuest={handleStartQuest}
+                onFinishQuest={handleFinishQuest}
+                onDeleteQuest={handleDeleteQuest}
+                onClearCompleted={handleClearCompleted}
+              />
+            </div>
+
+            {/* RIGHT COLUMN (Desktop: 4 cols) - Weekly Class Challenges & Achievements Matrix */}
+            <div className="lg:col-span-4 space-y-6 max-w-full overflow-hidden">
+              {/* Dynamic Weekly Class Challenges */}
+              <BossAndDailySection
+                challenges={state.challenges}
+                customCategories={state.customCategories}
+                onClaimReward={handleClaimChallengeReward}
+              />
+
+              {/* Achievement Matrix Preview Card */}
+              <div className="card-cozy p-4 bg-white dark:bg-slate-900 border-4 border-slate-800 dark:border-indigo-500/40 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-amber-500 fill-amber-400" />
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white">Bounty Matrix</h3>
+                  </div>
+
+                  <span className="bg-amber-300 text-slate-900 border border-slate-800 px-2 py-0.5 rounded-lg text-xs font-black">
+                    {unlockedBadgesCount} / {state.achievements.length}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-5 gap-2 pt-1">
+                  {state.achievements.slice(0, 10).map((ach) => (
+                    <div
+                      key={ach.id}
+                      className={`w-9 h-9 rounded-xl border-2 border-slate-800 flex items-center justify-center text-sm shadow-chunky-sm ${
+                        ach.unlocked
+                          ? 'bg-amber-300 dark:bg-indigo-600'
+                          : 'bg-slate-100 dark:bg-slate-800 opacity-40 grayscale'
+                      }`}
+                      title={ach.title}
+                    >
+                      {ach.badgeIcon}
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => {
+                    sounds.playPop();
+                    setIsAchievementsModalOpen(true);
+                  }}
+                  className="btn-tactile w-full bg-slate-800 text-white font-black py-2 text-xs"
+                >
+                  🏆 View All 30 Achievements
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
+        {/* Dedicated Bosses & Challenges View */}
         {activeTab === 'challenges' && (
-          <BossAndDailySection
-            challenges={state.challenges}
-            customCategories={state.customCategories}
-            onClaimReward={handleClaimChallengeReward}
-          />
+          <div className="max-w-4xl mx-auto space-y-6">
+            <div className="card-cozy p-6 bg-white dark:bg-slate-900 border-4 border-slate-800 dark:border-indigo-500/40">
+              <h2 className="text-xl font-black text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <span>🐲</span> Weekly Seeded Bosses & Class Challenges
+              </h2>
+              <BossAndDailySection
+                challenges={state.challenges}
+                customCategories={state.customCategories}
+                onClaimReward={handleClaimChallengeReward}
+              />
+            </div>
+          </div>
         )}
-      </div>
+
+        {/* Dedicated Avatar Studio View */}
+        {activeTab === 'avatar' && (
+          <div className="max-w-4xl mx-auto space-y-6">
+            <div className="card-cozy p-6 bg-white dark:bg-slate-900 border-4 border-slate-800 dark:border-indigo-500/40 flex flex-col items-center text-center space-y-4">
+              <h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <span>👗</span> Full-Body Avatar Studio
+              </h2>
+              <p className="text-sm font-bold text-slate-500 dark:text-slate-400">
+                Customize your pirate hero's headgear, face accessories, outfit, skin tone, and back items!
+              </p>
+              <button
+                onClick={() => setIsAvatarModalOpen(true)}
+                className="btn-tactile bg-amber-400 hover:bg-amber-500 text-slate-900 font-black px-6 py-3 text-sm shadow-chunky-sm"
+              >
+                ✨ Open Wardrobe Customizer
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Dedicated Badges View */}
+        {activeTab === 'badges' && (
+          <div className="max-w-4xl mx-auto space-y-6">
+            <div className="card-cozy p-6 bg-white dark:bg-slate-900 border-4 border-slate-800 dark:border-indigo-500/40 space-y-4">
+              <h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <span>🏆</span> 30-Achievement Bounty Matrix ({unlockedBadgesCount}/{state.achievements.length})
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {state.achievements.map((ach) => (
+                  <div
+                    key={ach.id}
+                    className={`p-3 rounded-2xl border-2 border-slate-800 flex items-center gap-3 transition-all ${
+                      ach.unlocked
+                        ? 'bg-amber-100 dark:bg-indigo-950/60 border-amber-500'
+                        : 'bg-slate-100 dark:bg-slate-800/60 opacity-60'
+                    }`}
+                  >
+                    <div className="w-10 h-10 rounded-xl border-2 border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center text-xl shrink-0">
+                      {ach.badgeIcon}
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900 dark:text-white leading-tight">
+                        {ach.title}
+                      </h4>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold">
+                        {ach.description}
+                      </p>
+                      <span className="text-[9px] font-black text-indigo-600 dark:text-indigo-400">
+                        +{ach.xpReward} XP
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Dedicated Skills View */}
+        {activeTab === 'skills' && (
+          <div className="max-w-4xl mx-auto space-y-6">
+            <div className="card-cozy p-6 bg-white dark:bg-slate-900 border-4 border-slate-800 dark:border-indigo-500/40 space-y-4">
+              <h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <span>⚡</span> Skill Tree & Traits ({state.traits.filter((t) => t.unlocked).length}/{state.traits.length})
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {state.traits.map((t) => (
+                  <div
+                    key={t.id}
+                    className={`p-4 rounded-2xl border-2 border-slate-800 flex items-start gap-3 ${
+                      t.unlocked
+                        ? 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-500'
+                        : 'bg-slate-100 dark:bg-slate-800/60 opacity-60'
+                    }`}
+                  >
+                    <div className="w-10 h-10 rounded-xl border-2 border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center text-xl shrink-0">
+                      {t.icon}
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900 dark:text-white">
+                        {t.name}
+                      </h4>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold">
+                        {t.description}
+                      </p>
+                      <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 mt-1 inline-block">
+                        {t.effect}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+      </main>
 
       {/* Footer */}
-      <footer className="mt-12 text-center text-xs font-bold text-slate-500 dark:text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-3 border-t-2 border-slate-300 dark:border-slate-800 pt-6">
-        <div className="flex items-center gap-1.5">
-          <span>Crafted with</span>
-          <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-400 inline" />
-          <span>for Pirate Guild Focus & Grand Line Conquest</span>
+      <footer className="mt-12 text-center text-xs font-bold text-slate-500 dark:text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-3 max-w-7xl mx-auto px-4 py-6 border-t-2 border-slate-300 dark:border-slate-800">
+        <div>
+          🏴‍☠️ Stardew x One Piece Productivity Guild • Designed for Google Antigravity
         </div>
-
-        <button
-          onClick={handleResetData}
-          className="text-slate-400 hover:text-rose-600 transition-colors flex items-center gap-1 text-[11px]"
-        >
-          <RefreshCw className="w-3 h-3" /> Reset Demo Data
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setIsSettingsModalOpen(true)}
+            className="hover:underline text-indigo-600 dark:text-indigo-400"
+          >
+            Settings
+          </button>
+          <span>•</span>
+          <button
+            onClick={handleResetData}
+            className="hover:underline text-rose-500"
+          >
+            Reset Progress
+          </button>
+        </div>
       </footer>
 
-      {/* Modal Overlay Dialogs */}
+      {/* Modals & Drawers */}
       <AddQuestForm
         isOpen={isAddQuestModalOpen}
         onClose={() => setIsAddQuestModalOpen(false)}
@@ -925,7 +1112,9 @@ export function App() {
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
         settings={state.settings}
+        primaryClass={state.user.primaryClass}
         onUpdateSettings={handleUpdateSettings}
+        onChangeClass={handleChangeClass}
         onLogout={handleLogout}
       />
 
