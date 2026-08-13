@@ -42,6 +42,26 @@
   }
 }
 
+/* Visible Custom Scrollbar for Desktop Customization Carousels */
+.custom-desktop-scrollbar::-webkit-scrollbar {
+  height: 8px;
+}
+
+.custom-desktop-scrollbar::-webkit-scrollbar-track {
+  background: #0f172a;
+  border-radius: 9999px;
+  border: 1px solid #1e293b;
+}
+
+.custom-desktop-scrollbar::-webkit-scrollbar-thumb {
+  background: #4f46e5;
+  border-radius: 9999px;
+}
+
+.custom-desktop-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #6366f1;
+}
+
 /* Cozy Custom Animations */
 @keyframes wobble {
   0%, 100% { transform: rotate(0deg); }

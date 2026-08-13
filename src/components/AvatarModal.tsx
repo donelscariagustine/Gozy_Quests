@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { AvatarState } from '../types/todo';
 import { FullBodyAvatarRenderer } from './FullBodyAvatarRenderer';
 import { AVAILABLE_TITLES } from '../utils/gameEngine';
@@ -13,64 +13,145 @@ interface AvatarModalProps {
 }
 
 const HEAD_ITEMS = [
-  { label: 'Straw Hat (Luffy Ref) 👒', value: 'straw_hat' },
-  { label: 'Pirate Captain Bicorne 🏴‍☠️', value: 'pirate_bicorne' },
-  { label: 'Wizard Hat 🧙', value: 'wizard_hat' },
-  { label: 'Royal Crown 👑', value: 'crown' },
-  { label: 'Headphones 🎧', value: 'headphones' },
-  { label: 'Viking Helm 🪖', value: 'viking' },
-  { label: 'Bunny Ears 🐰', value: 'bunny_ears' },
-  { label: 'None', value: 'none' },
+  { label: 'Straw Hat (Luffy Ref) 👒', id: 'straw_hat' },
+  { label: 'Pirate Captain Bicorne 🏴‍☠️', id: 'pirate_bicorne' },
+  { label: 'Wizard Hat 🧙', id: 'wizard_hat' },
+  { label: 'Royal Crown 👑', id: 'crown' },
+  { label: 'Headphones 🎧', id: 'headphones' },
+  { label: 'Viking Helm 🪖', id: 'viking' },
+  { label: 'Bunny Ears 🐰', id: 'bunny_ears' },
+  { label: 'None ❌', id: 'none' },
 ];
 
 const FACE_ITEMS = [
-  { label: 'Zoro Eye Scar / Eyepatch 👁️', value: 'zoro_eyepatch' },
-  { label: 'Pirate Bandana 🏴‍☠️', value: 'bandana' },
-  { label: 'Anime Sparkle Eyes ✨', value: 'anime_eyes' },
-  { label: 'Wayfarer Glasses 👓', value: 'glasses' },
-  { label: 'Cyber Goggles 🥽', value: 'goggles' },
-  { label: 'Monocle 🧐', value: 'monocle' },
-  { label: 'Surgical Mask 😷', value: 'mask' },
-  { label: 'None', value: 'none' },
+  { label: 'Zoro Eye Scar / Eyepatch 👁️', id: 'zoro_eyepatch' },
+  { label: 'Pirate Bandana 🏴‍☠️', id: 'bandana' },
+  { label: 'Anime Sparkle Eyes ✨', id: 'anime_eyes' },
+  { label: 'Wayfarer Glasses 👓', id: 'glasses' },
+  { label: 'Cyber Goggles 🥽', id: 'goggles' },
+  { label: 'Monocle 🧐', id: 'monocle' },
+  { label: 'Surgical Mask 😷', id: 'mask' },
+  { label: 'None ❌', id: 'none' },
 ];
 
 const HAIR_STYLES = [
-  { label: 'Emperor Red Flow (Shanks) 🔴', value: 'shanks_flow' },
-  { label: 'Spiky Anime ⚡', value: 'spiky' },
-  { label: 'Short Crop ✂️', value: 'short' },
-  { label: 'Long Flow 🌊', value: 'long' },
-  { label: 'Top Bun 🍡', value: 'bun' },
-  { label: 'Afro Cloud ☁️', value: 'afro' },
+  { label: 'Samurai Topknot 🗡️', id: 'samurai_bun' },
+  { label: 'Spiky Manga ⚡', id: 'spiky' },
+  { label: 'Short Crop ✂️', id: 'short' },
+  { label: 'Long Flow 🌊', id: 'long' },
+  { label: 'Top Bun 🍡', id: 'bun' },
+  { label: 'Clean Shaved 🧑‍🦲', id: 'bald' },
 ];
 
 const OUTFIT_OPTIONS = [
-  { label: 'Pirate Captain Robe 🏴‍☠️', value: 'pirate_captain' },
-  { label: 'Knight Armor 🛡️', value: 'armor' },
-  { label: 'Cozy Hoodie 🧥', value: 'hoodie' },
-  { label: 'Cyberpunk Suit ⚡', value: 'cyberpunk' },
-  { label: 'Royal Cape Fit 👑', value: 'royal' },
+  { label: 'Pirate Captain Robe 🏴‍☠️', id: 'pirate_captain' },
+  { label: 'Knight Armor 🛡️', id: 'armor' },
+  { label: 'Cozy Hoodie 🧥', id: 'hoodie' },
+  { label: 'Cyberpunk Suit ⚡', id: 'cyberpunk' },
+  { label: 'Royal Cape Fit 👑', id: 'royal' },
 ];
 
 const FOOTWEAR_OPTIONS = [
-  { label: 'Straw Sandals (Luffy Ref) 🩴', value: 'sandals' },
-  { label: 'Pirate Leather Boots 👢', value: 'pirate_boots' },
-  { label: 'Combat Boots 🥾', value: 'boots' },
-  { label: 'High Sneakers 👟', value: 'sneakers' },
-  { label: 'Barefoot 🦶', value: 'barefoot' },
+  { label: 'Straw Sandals (Luffy Ref) 🩴', id: 'straw_sandals' },
+  { label: 'Pirate Leather Boots 👢', id: 'pirate_boots' },
+  { label: 'Shadow High-Tops 👟', id: 'shadow_sneakers' },
+  { label: 'Knight Greaves 🥾', id: 'boots' },
 ];
 
 const BACK_ITEMS = [
-  { label: '3 Katanas (Zoro Ref) ⚔️', value: 'zoro_3swords' },
-  { label: 'Black Blade Yoru (Mihawk Ref) 🗡️', value: 'mihawk_yoru' },
-  { label: 'Angel Wings 🪽', value: 'angel_wings' },
-  { label: 'Demon Wings 🦇', value: 'demon_wings' },
-  { label: 'Aegis Shield 🛡️', value: 'shield' },
-  { label: 'Companion Cat 🐱', value: 'pet_cat' },
-  { label: 'Royal Cape 🦸', value: 'cape' },
-  { label: 'None ❌', value: 'none' },
+  { label: '3 Katanas (Zoro Ref) ⚔️', id: 'zoro_3swords' },
+  { label: 'Black Blade Yoru (Mihawk Ref) 🗡️', id: 'mihawk_yoru' },
+  { label: 'Shadow Demon Wings 🦇', id: 'demon_wings' },
+  { label: 'Angel Wings 🪽', id: 'angel_wings' },
+  { label: 'Aegis Shield 🛡️', id: 'shield' },
+  { label: 'Emperor Dark Cape 🦸', id: 'cape' },
+  { label: 'None ❌', id: 'none' },
 ];
 
 const COLOR_PALETTE = ['#D63031', '#6C5CE7', '#FF7675', '#55E6C1', '#FDCB6E', '#74B9FF', '#2D3436', '#E17055', '#4834D4'];
+
+interface DraggableSelectorProps<T> {
+  title: string;
+  items: { id: T; label: string }[];
+  selectedId: T;
+  onSelect: (id: T) => void;
+}
+
+export function DraggableSelector<T extends string>({
+  title,
+  items,
+  selectedId,
+  onSelect,
+}: DraggableSelectorProps<T>) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Arrow Navigation Scroll Handler
+  const handleScroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const scrollAmount = direction === 'left' ? -200 : 200;
+      scrollRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
+  return (
+    <div className="space-y-2 mb-5">
+      {/* Category Header with Arrow Controls for Desktop */}
+      <div className="flex items-center justify-between px-1">
+        <label className="text-xs font-black uppercase text-indigo-400 tracking-wider">
+          {title}
+        </label>
+        
+        {/* Desktop Arrow Buttons */}
+        <div className="hidden md:flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => handleScroll('left')}
+            className="h-7 w-7 rounded-lg border-2 border-slate-700 bg-[#1e293b] text-slate-300 hover:bg-indigo-600 hover:text-white flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
+            title="Scroll Left"
+          >
+            ◄
+          </button>
+          <button
+            type="button"
+            onClick={() => handleScroll('right')}
+            className="h-7 w-7 rounded-lg border-2 border-slate-700 bg-[#1e293b] text-slate-300 hover:bg-indigo-600 hover:text-white flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
+            title="Scroll Right"
+          >
+            ►
+          </button>
+        </div>
+      </div>
+
+      {/* DRAGGABLE & SCROLLABLE TRACK */}
+      <div
+        ref={scrollRef}
+        className="flex gap-2.5 overflow-x-auto py-2 px-1 cursor-grab active:cursor-grabbing select-none scroll-smooth custom-desktop-scrollbar"
+        style={{
+          scrollbarWidth: 'thin',
+          scrollbarColor: '#4f46e5 #0f172a',
+        }}
+      >
+        {items.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => {
+              sounds.playPop();
+              onSelect(item.id);
+            }}
+            className={`shrink-0 rounded-2xl border-2 px-4 py-2.5 text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
+              selectedId === item.id
+                ? 'border-indigo-500 bg-indigo-600 text-white shadow-[0_0_12px_rgba(99,102,241,0.5)] scale-105'
+                : 'border-slate-800 bg-[#1e293b] text-slate-300 hover:bg-slate-700'
+            }`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export const AvatarModal: React.FC<AvatarModalProps> = ({
   isOpen,
@@ -79,19 +160,19 @@ export const AvatarModal: React.FC<AvatarModalProps> = ({
   onSaveAvatar,
 }) => {
   const [draft, setDraft] = useState<AvatarState>(avatar);
-  const [activeTab, setActiveTab] = useState<'title' | 'head' | 'face' | 'hair' | 'outfit' | 'footwear' | 'back'>('title');
 
   if (!isOpen) return null;
 
   const handleRandomize = () => {
     sounds.playPop();
-    const randomHead = HEAD_ITEMS[Math.floor(Math.random() * HEAD_ITEMS.length)].value;
-    const randomFace = FACE_ITEMS[Math.floor(Math.random() * FACE_ITEMS.length)].value;
-    const randomHair = HAIR_STYLES[Math.floor(Math.random() * HAIR_STYLES.length)].value;
+    const randomHead = HEAD_ITEMS[Math.floor(Math.random() * HEAD_ITEMS.length)].id;
+    const randomFace = FACE_ITEMS[Math.floor(Math.random() * FACE_ITEMS.length)].id;
+    const randomHair = HAIR_STYLES[Math.floor(Math.random() * HAIR_STYLES.length)].id;
     const randomHairColor = COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)];
-    const randomOutfit = OUTFIT_OPTIONS[Math.floor(Math.random() * OUTFIT_OPTIONS.length)].value;
+    const randomOutfit = OUTFIT_OPTIONS[Math.floor(Math.random() * OUTFIT_OPTIONS.length)].id;
     const randomTopColor = COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)];
-    const randomBack = BACK_ITEMS[Math.floor(Math.random() * BACK_ITEMS.length)].value;
+    const randomFootwear = FOOTWEAR_OPTIONS[Math.floor(Math.random() * FOOTWEAR_OPTIONS.length)].id;
+    const randomBack = BACK_ITEMS[Math.floor(Math.random() * BACK_ITEMS.length)].id;
 
     setDraft((prev) => ({
       ...prev,
@@ -101,331 +182,200 @@ export const AvatarModal: React.FC<AvatarModalProps> = ({
       hairColor: randomHairColor,
       outfit: randomOutfit,
       topColor: randomTopColor,
+      footwear: randomFootwear,
       backItem: randomBack,
     }));
   };
 
   const handleSave = () => {
-    sounds.playPop();
+    sounds.playLevelUp();
     onSaveAvatar(draft);
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-pop-in">
-      <div className="card-cozy w-full max-w-xl overflow-hidden flex flex-col max-h-[92vh] bg-[#FAF6EE] dark:bg-slate-900 text-slate-800 dark:text-slate-100">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 bg-amber-100 dark:bg-slate-800 border-b-4 border-slate-800 dark:border-indigo-500/40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-pop-in">
+      <div className="card-cozy w-full max-w-2xl p-6 bg-[#0f172a] text-slate-100 border-4 border-slate-800 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto relative">
+        {/* Modal Header */}
+        <div className="flex items-center justify-between border-b-2 border-slate-800 pb-3">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-amber-500 fill-amber-300" />
-            <h2 className="text-xl font-black">Pirate Wardrobe Studio</h2>
+            <Sparkles className="w-6 h-6 text-amber-400" />
+            <h2 className="text-xl font-black text-white">Full-Body Hero Avatar Studio</h2>
           </div>
           <button
             onClick={() => {
               sounds.playPop();
               onClose();
             }}
-            className="p-1.5 rounded-full hover:bg-amber-200 dark:hover:bg-slate-700 transition-colors"
+            className="p-1 text-slate-400 hover:text-white transition-colors cursor-pointer"
           >
-            <X className="w-6 h-6" />
+            <X className="w-6 h-6 stroke-[3]" />
           </button>
         </div>
 
-        {/* Content Body */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-[#FAF6EE] dark:bg-slate-950">
-          {/* Live Preview Card */}
-          <div className="flex flex-col items-center justify-center p-6 bg-white dark:bg-slate-900 border-4 border-slate-800 dark:border-indigo-500/40 rounded-2xl shadow-chunky relative">
-            <FullBodyAvatarRenderer avatar={draft} size={190} animate={true} />
-            <div className="mt-2 text-center">
-              <span className="bg-amber-300 dark:bg-indigo-600 text-slate-900 dark:text-white border border-slate-800 dark:border-indigo-400 text-xs font-black px-3 py-0.5 rounded-lg inline-block shadow-chunky-sm">
-                🏴‍☠️ {draft.equippedTitle}
+        {/* Studio Layout Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+          {/* Avatar Preview Panel (Left Column) */}
+          <div className="md:col-span-5 flex flex-col items-center justify-center rounded-3xl border-4 border-slate-800 bg-[#1e293b] p-6 text-center shadow-inner relative">
+            <span className="absolute top-3 left-3 rounded-full border border-slate-700 bg-indigo-600 px-3 py-1 text-[10px] font-black uppercase text-white shadow-sm">
+              Live Preview
+            </span>
+
+            <div className="my-4">
+              <FullBodyAvatarRenderer avatar={draft} size={190} animate={true} />
+            </div>
+
+            <div className="mt-2 text-center space-y-1">
+              <span className="inline-flex items-center gap-1 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-black text-amber-400">
+                <Crown className="w-3.5 h-3.5" /> {draft.equippedTitle || 'Pirate King'}
               </span>
             </div>
+
             <button
               onClick={handleRandomize}
-              className="mt-3 btn-tactile-sm bg-amber-200 dark:bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5"
+              className="mt-4 btn-tactile bg-amber-400 hover:bg-amber-500 text-slate-900 text-xs font-black px-4 py-2 flex items-center gap-1.5 cursor-pointer"
             >
-              <Shuffle className="w-3.5 h-3.5" /> Randomize Outfit
+              <Shuffle className="w-4 h-4" /> Randomize Fit
             </button>
           </div>
 
-          {/* Navigation Tabs */}
-          <div className="flex gap-1.5 border-b-4 border-slate-800 dark:border-indigo-500/40 pb-2 overflow-x-auto">
-            {(['title', 'head', 'face', 'hair', 'outfit', 'footwear', 'back'] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => {
-                  sounds.playPop();
-                  setActiveTab(tab);
-                }}
-                className={`px-3 py-1.5 text-xs font-bold capitalize rounded-xl transition-all border-2 border-slate-800 dark:border-slate-700 flex-shrink-0 ${
-                  activeTab === tab
-                    ? 'bg-amber-300 dark:bg-indigo-600 text-slate-900 dark:text-white shadow-chunky-sm translate-y-[-2px]'
-                    : 'bg-white dark:bg-slate-800 hover:bg-amber-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'
-                }`}
-              >
-                {tab === 'title' && '👑 Title'}
-                {tab === 'head' && '👒 Head'}
-                {tab === 'face' && '👁️ Face'}
-                {tab === 'hair' && '💇 Hair'}
-                {tab === 'outfit' && '👕 Outfit'}
-                {tab === 'footwear' && '🩴 Shoes'}
-                {tab === 'back' && '⚔️ Back Gear'}
-              </button>
-            ))}
-          </div>
-
-          {/* Tab Options */}
-          <div className="space-y-4">
-            {/* TITLE TAB */}
-            {activeTab === 'title' && (
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wide mb-2 flex items-center gap-1">
-                  <Crown className="w-3.5 h-3.5 text-amber-500" /> Equip Guild Title
+          {/* Controls Panel (Right Column) - Touch & Draggable Carousels with Desktop Arrow Controls */}
+          <div className="md:col-span-7 space-y-4 max-h-[60vh] overflow-y-auto no-scrollbar pr-1">
+            {/* Title Selector */}
+            <div className="space-y-2 mb-5">
+              <div className="flex items-center justify-between px-1">
+                <label className="text-xs font-black uppercase text-amber-400 tracking-wider">
+                  👑 Equipped Title Badge
                 </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {AVAILABLE_TITLES.map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => {
-                        sounds.playPop();
-                        setDraft({ ...draft, equippedTitle: t });
-                      }}
-                      className={`p-2.5 rounded-xl text-xs font-bold border-2 border-slate-800 transition-all ${
-                        draft.equippedTitle === t
-                          ? 'bg-amber-300 dark:bg-indigo-600 text-slate-900 dark:text-white shadow-chunky-sm'
-                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      🏴‍☠️ {t}
-                    </button>
-                  ))}
-                </div>
               </div>
-            )}
-
-            {/* HEAD TAB */}
-            {activeTab === 'head' && (
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wide mb-2">
-                  Head Items & Pirate Hats
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {HEAD_ITEMS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => {
-                        sounds.playPop();
-                        setDraft({ ...draft, headItem: opt.value });
-                      }}
-                      className={`p-2.5 rounded-xl text-xs font-bold border-2 border-slate-800 transition-all ${
-                        draft.headItem === opt.value
-                          ? 'bg-indigo-500 text-white shadow-chunky-sm'
-                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
+              <div className="flex gap-2 overflow-x-auto no-scrollbar py-2 snap-x cursor-grab active:cursor-grabbing select-none">
+                {AVAILABLE_TITLES.map((title) => (
+                  <button
+                    key={title}
+                    type="button"
+                    onClick={() => {
+                      sounds.playPop();
+                      setDraft((prev) => ({ ...prev, equippedTitle: title }));
+                    }}
+                    className={`snap-start shrink-0 rounded-2xl border-2 px-3.5 py-2 text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
+                      draft.equippedTitle === title
+                        ? 'border-amber-500 bg-amber-500/20 text-amber-300 shadow-sm scale-105'
+                        : 'border-slate-800 bg-[#1e293b] text-slate-300 hover:bg-slate-700'
+                    }`}
+                  >
+                    👑 {title}
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
 
-            {/* FACE TAB */}
-            {activeTab === 'face' && (
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wide mb-2">
-                  Facial Eyewear & Scars
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {FACE_ITEMS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => {
-                        sounds.playPop();
-                        setDraft({ ...draft, faceItem: opt.value });
-                      }}
-                      className={`p-2.5 rounded-xl text-xs font-bold border-2 border-slate-800 transition-all ${
-                        draft.faceItem === opt.value
-                          ? 'bg-emerald-400 text-slate-900 shadow-chunky-sm'
-                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
+            {/* Draggable Selector Carousels */}
+            <DraggableSelector
+              title="head gear"
+              items={HEAD_ITEMS}
+              selectedId={draft.headItem}
+              onSelect={(id) => setDraft((prev) => ({ ...prev, headItem: id }))}
+            />
+
+            <DraggableSelector
+              title="face gear"
+              items={FACE_ITEMS}
+              selectedId={draft.faceItem}
+              onSelect={(id) => setDraft((prev) => ({ ...prev, faceItem: id }))}
+            />
+
+            <DraggableSelector
+              title="hair style"
+              items={HAIR_STYLES}
+              selectedId={draft.hairStyle}
+              onSelect={(id) => setDraft((prev) => ({ ...prev, hairStyle: id }))}
+            />
+
+            {/* Hair Color Palette Selector */}
+            <div className="space-y-2 mb-5">
+              <label className="text-xs font-black uppercase text-indigo-400 tracking-wider px-1">
+                hair dye
+              </label>
+              <div className="flex items-center gap-2 overflow-x-auto custom-desktop-scrollbar py-2 px-1">
+                {COLOR_PALETTE.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => {
+                      sounds.playPop();
+                      setDraft((prev) => ({ ...prev, hairColor: color }));
+                    }}
+                    className={`w-8 h-8 rounded-full border-2 border-slate-800 shrink-0 transition-transform cursor-pointer ${
+                      draft.hairColor === color ? 'scale-125 ring-2 ring-white' : 'hover:scale-110'
+                    }`}
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
               </div>
-            )}
+            </div>
 
-            {/* HAIR TAB */}
-            {activeTab === 'hair' && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wide mb-2">
-                    Hairstyle
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {HAIR_STYLES.map((opt) => (
-                      <button
-                        key={opt.value}
-                        onClick={() => {
-                          sounds.playPop();
-                          setDraft({ ...draft, hairStyle: opt.value });
-                        }}
-                        className={`p-2 rounded-xl text-xs font-bold border-2 border-slate-800 transition-all ${
-                          draft.hairStyle === opt.value
-                            ? 'bg-indigo-500 text-white shadow-chunky-sm'
-                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+            <DraggableSelector
+              title="top outfit"
+              items={OUTFIT_OPTIONS}
+              selectedId={draft.outfit}
+              onSelect={(id) => setDraft((prev) => ({ ...prev, outfit: id }))}
+            />
 
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wide mb-2">
-                    Hair Color Palette
-                  </label>
-                  <div className="flex flex-wrap gap-2.5">
-                    {COLOR_PALETTE.map((c) => (
-                      <button
-                        key={c}
-                        onClick={() => {
-                          sounds.playPop();
-                          setDraft({ ...draft, hairColor: c });
-                        }}
-                        className="w-8 h-8 rounded-full border-2 border-slate-800 shadow-chunky-sm hover:scale-110 transition-transform"
-                        style={{ backgroundColor: c }}
-                      />
-                    ))}
-                  </div>
-                </div>
+            {/* Top Color Palette Selector */}
+            <div className="space-y-2 mb-5">
+              <label className="text-xs font-black uppercase text-indigo-400 tracking-wider px-1">
+                outfit dye
+              </label>
+              <div className="flex items-center gap-2 overflow-x-auto custom-desktop-scrollbar py-2 px-1">
+                {COLOR_PALETTE.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => {
+                      sounds.playPop();
+                      setDraft((prev) => ({ ...prev, topColor: color }));
+                    }}
+                    className={`w-8 h-8 rounded-full border-2 border-slate-800 shrink-0 transition-transform cursor-pointer ${
+                      draft.topColor === color ? 'scale-125 ring-2 ring-white' : 'hover:scale-110'
+                    }`}
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
               </div>
-            )}
+            </div>
 
-            {/* OUTFIT TAB */}
-            {activeTab === 'outfit' && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wide mb-2">
-                    Torso Outfit
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {OUTFIT_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.value}
-                        onClick={() => {
-                          sounds.playPop();
-                          setDraft({ ...draft, outfit: opt.value });
-                        }}
-                        className={`p-2.5 rounded-xl text-xs font-bold border-2 border-slate-800 transition-all ${
-                          draft.outfit === opt.value
-                            ? 'bg-indigo-500 text-white shadow-chunky-sm'
-                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+            <DraggableSelector
+              title="footwear / shoes"
+              items={FOOTWEAR_OPTIONS}
+              selectedId={draft.footwear}
+              onSelect={(id) => setDraft((prev) => ({ ...prev, footwear: id }))}
+            />
 
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wide mb-2">
-                    Top Color
-                  </label>
-                  <div className="flex flex-wrap gap-2.5">
-                    {COLOR_PALETTE.map((c) => (
-                      <button
-                        key={c}
-                        onClick={() => {
-                          sounds.playPop();
-                          setDraft({ ...draft, topColor: c });
-                        }}
-                        className="w-8 h-8 rounded-full border-2 border-slate-800 shadow-chunky-sm hover:scale-110 transition-transform"
-                        style={{ backgroundColor: c }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* FOOTWEAR TAB */}
-            {activeTab === 'footwear' && (
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wide mb-2">
-                  Footwear & Sandals
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {FOOTWEAR_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => {
-                        sounds.playPop();
-                        setDraft({ ...draft, footwear: opt.value });
-                      }}
-                      className={`p-2.5 rounded-xl text-xs font-bold border-2 border-slate-800 transition-all ${
-                        draft.footwear === opt.value
-                          ? 'bg-rose-400 text-slate-900 shadow-chunky-sm'
-                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* BACK TAB */}
-            {activeTab === 'back' && (
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wide mb-2">
-                  Back Equipment & Katanas
-                </label>
-                <div className="grid grid-cols-2 gap-2.5">
-                  {BACK_ITEMS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => {
-                        sounds.playPop();
-                        setDraft({ ...draft, backItem: opt.value });
-                      }}
-                      className={`p-3 rounded-xl text-xs font-bold border-2 border-slate-800 flex items-center gap-2 transition-all ${
-                        draft.backItem === opt.value
-                          ? 'bg-emerald-300 text-slate-900 shadow-chunky-sm'
-                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      <span>{opt.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            <DraggableSelector
+              title="back gear"
+              items={BACK_ITEMS}
+              selectedId={draft.backItem}
+              onSelect={(id) => setDraft((prev) => ({ ...prev, backItem: id }))}
+            />
           </div>
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 bg-amber-100 dark:bg-slate-800 border-t-4 border-slate-800 dark:border-indigo-500/40 flex items-center justify-between">
+        <div className="flex items-center justify-end gap-3 pt-4 border-t-2 border-slate-800">
           <button
             onClick={() => {
               sounds.playPop();
               onClose();
             }}
-            className="btn-tactile bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2 text-sm font-bold"
+            className="px-5 py-2.5 rounded-xl border-2 border-slate-800 bg-[#1e293b] text-slate-300 font-extrabold text-xs hover:bg-slate-700 cursor-pointer"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className="btn-tactile bg-emerald-400 hover:bg-emerald-500 text-slate-900 font-bold px-6 py-2 text-sm flex items-center gap-2"
+            className="btn-tactile bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs px-6 py-2.5 flex items-center gap-2 cursor-pointer shadow-[2px_2px_0px_0px_#020617]"
           >
-            <Check className="w-4 h-4" /> Save Pirate Avatar
+            <Check className="w-4 h-4 stroke-[3]" /> Save Hero Gear
           </button>
         </div>
       </div>

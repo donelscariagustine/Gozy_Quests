@@ -836,13 +836,7 @@ export function App() {
   }
 
   return (
-    <div
-      className={
-        isDark
-          ? 'dark min-h-screen w-full bg-[#050811] text-slate-100 transition-colors duration-200'
-          : 'min-h-screen w-full bg-[#fffbeb] text-slate-900 transition-colors duration-200'
-      }
-    >
+    <div className="min-h-screen bg-[#050811] text-slate-100 selection:bg-indigo-600 selection:text-white">
       {/* Top Header Bar Spanning Full max-w-7xl Width */}
       <HeaderBar
         user={state.user}
@@ -855,7 +849,6 @@ export function App() {
         traits={state.traits}
         activeTab={activeTab}
         onSelectTab={(tab) => setActiveTab(tab)}
-        onToggleTheme={handleToggleTheme}
         onLogout={handleLogout}
         onOpenAvatarModal={() => setIsAvatarModalOpen(true)}
         onOpenAchievementsModal={() => setIsAchievementsModalOpen(true)}
