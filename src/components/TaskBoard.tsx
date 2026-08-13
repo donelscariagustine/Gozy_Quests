@@ -226,15 +226,13 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({
                     )}
                   </div>
 
-                  {/* Quest Title */}
+                  {/* Quest Title (Explicit White Text Override) */}
                   <h3
-                    className={`text-base font-black leading-snug mb-2 break-words line-clamp-2 ${
-                      isCompleted
-                        ? 'line-through text-slate-400 dark:text-slate-500'
-                        : 'text-slate-900 dark:text-white'
+                    className={`text-base sm:text-lg font-black !text-white !text-slate-100 break-words tracking-wide my-3 leading-snug line-clamp-2 ${
+                      isCompleted ? 'line-through opacity-60' : ''
                     }`}
                   >
-                    {quest.title}
+                    {quest.title || 'Untitled Quest'}
                   </h3>
 
                   {/* Deadline & Target Time Info */}

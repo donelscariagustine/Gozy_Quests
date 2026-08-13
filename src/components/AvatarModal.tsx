@@ -241,14 +241,20 @@ export const AvatarModal: React.FC<AvatarModalProps> = ({
 
           {/* Controls Panel (Right Column) - Touch & Draggable Carousels with Desktop Arrow Controls */}
           <div className="md:col-span-7 space-y-4 max-h-[60vh] overflow-y-auto no-scrollbar pr-1">
-            {/* Title Selector */}
+            {/* Title Selector Track with Custom Title Scrollbar */}
             <div className="space-y-2 mb-5">
               <div className="flex items-center justify-between px-1">
                 <label className="text-xs font-black uppercase text-amber-400 tracking-wider">
-                  👑 Equipped Title Badge
+                  🏆 Equipped Title Badge
                 </label>
               </div>
-              <div className="flex gap-2 overflow-x-auto no-scrollbar py-2 snap-x cursor-grab active:cursor-grabbing select-none">
+              <div
+                className="flex gap-2.5 overflow-x-auto py-2.5 px-1 select-none scroll-smooth custom-title-scrollbar"
+                style={{
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: '#4f46e5 #0f172a',
+                }}
+              >
                 {AVAILABLE_TITLES.map((title) => (
                   <button
                     key={title}
@@ -257,13 +263,13 @@ export const AvatarModal: React.FC<AvatarModalProps> = ({
                       sounds.playPop();
                       setDraft((prev) => ({ ...prev, equippedTitle: title }));
                     }}
-                    className={`snap-start shrink-0 rounded-2xl border-2 px-3.5 py-2 text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
+                    className={`shrink-0 rounded-2xl border-2 px-4 py-2 text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
                       draft.equippedTitle === title
-                        ? 'border-amber-500 bg-amber-500/20 text-amber-300 shadow-sm scale-105'
+                        ? 'border-amber-400 bg-amber-400/20 text-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.3)] scale-105'
                         : 'border-slate-800 bg-[#1e293b] text-slate-300 hover:bg-slate-700'
                     }`}
                   >
-                    👑 {title}
+                    ✨ {title}
                   </button>
                 ))}
               </div>
