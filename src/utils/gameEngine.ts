@@ -385,6 +385,23 @@ export const INITIAL_STATE: AppState = {
   challenges: getWeeklyChallenges('coding'),
   achievements: INITIAL_30_ACHIEVEMENTS,
   traits: INITIAL_TRAITS,
+  projects: [
+    {
+      id: 'demo-project-1',
+      name: 'Gozy Quests Engine v2.0',
+      category: 'coding',
+      colorTag: '#6C5CE7',
+      overview: 'Build subquests workspace, developer notebook auto-save, and direct questboard push integration.',
+      targetDeadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      subtasks: [
+        { id: 'st-1', title: 'Design SVG Avatar Rendering Stack', estimatedMinutes: 30, completed: true, pushedToQuestboard: true },
+        { id: 'st-2', title: 'Implement Code Projects Folder Hub', estimatedMinutes: 45, completed: false, pushedToQuestboard: false },
+        { id: 'st-3', title: 'Build Auto-Saving Developer Notebook', estimatedMinutes: 25, completed: false, pushedToQuestboard: false },
+      ],
+      notes: '# Developer Notebook & Architecture Notes\n\n- System: Gozy Quests Interactive Folder Hub\n- Features: Subquest Manager, Direct Questboard Push, Auto-saving Markdown Notebook\n- Theme: 100% Midnight Navy Baseline',
+      createdAt: new Date().toISOString(),
+    },
+  ],
 };
 
 export function calculateLevel(xp: number): number {

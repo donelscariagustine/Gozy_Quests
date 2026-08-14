@@ -4,7 +4,7 @@ import { FullBodyAvatarRenderer } from './FullBodyAvatarRenderer';
 import { getXPProgress } from '../utils/gameEngine';
 import { sounds } from '../utils/audio';
 
-export type ActiveTab = 'quests' | 'avatar' | 'challenges' | 'badges';
+export type ActiveTab = 'quests' | 'projects' | 'avatar' | 'challenges' | 'badges';
 export type MainNavTab = ActiveTab;
 
 interface HeaderBarProps {
@@ -113,6 +113,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         <div className="max-w-7xl mx-auto flex items-center gap-2 overflow-x-auto no-scrollbar">
           {[
             { id: 'quests', label: '📋 Quests' },
+            { id: 'projects', label: '📁 Project Folders' },
             { id: 'avatar', label: '🥋 Avatar Studio' },
             { id: 'challenges', label: '⚔️ Bosses & Challenges' },
             { id: 'badges', label: '🏆 Badges' },

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import confetti from 'canvas-confetti';
-import { AppState, AvatarState, Quest, CategoryChallenge, Achievement, AvatarTrait, CustomCategory, UserSettings, CharacterClass, TodoType } from './types/todo';
+import { AppState, AvatarState, Quest, CategoryChallenge, Achievement, AvatarTrait, CustomCategory, UserSettings, CharacterClass, TodoType, ProjectFolder, ProjectSubtask } from './types/todo';
 import {
   INITIAL_STATE,
   calculateLevel,
@@ -24,6 +24,9 @@ import { SkillTreeModal } from './components/SkillTreeModal';
 import { AchievementCabinet } from './components/AchievementCabinet';
 import { SettingsModal } from './components/SettingsModal';
 import { LevelUpModal } from './components/LevelUpModal';
+import { ProjectFolderHub } from './components/ProjectFolderHub';
+import { AddProjectModal } from './components/AddProjectModal';
+import { ProjectWorkspaceModal } from './components/ProjectWorkspaceModal';
 import { sounds } from './utils/audio';
 import { Trophy, Zap, Flame, Crown, RefreshCw, Heart, Sparkles } from 'lucide-react';
 
@@ -43,6 +46,7 @@ const getInitialAppState = (): AppState => {
           avatar: { ...INITIAL_STATE.avatar, ...(parsed.avatar || {}) },
           customCategories: parsed.customCategories || INITIAL_STATE.customCategories,
           quests: parsed.quests || INITIAL_STATE.quests,
+          projects: parsed.projects || INITIAL_STATE.projects,
           challenges: INITIAL_STATE.challenges.map((defCh) => {
             const found = (parsed.challenges || []).find((c: CategoryChallenge) => c.id === defCh.id);
             return found ? { ...defCh, ...found } : defCh;
@@ -78,6 +82,193 @@ export function App() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isTimerPaused, setIsTimerPaused] = useState(false);
   const [levelUpLevel, setLevelUpLevel] = useState<number | null>(null);
+
+  // Project Folder State
+  const [isAddProjectModalOpen, setIsAddProjectModalOpen] = useState(false);
+  const [openedProjectFolder, setOpenedProjectFolder] = useState<ProjectFolder | null>(null);
+
+  const handleAddProject = (
+    name: string,
+    category: CharacterClass,
+    colorTag: string,
+    overview: string,
+    targetDeadline: string
+  ) => {
+    const newProject: ProjectFolder = {
+      id: `proj-${Date.now()}`,
+      name,
+      category,
+      colorTag,
+      overview,
+      targetDeadline,
+      subtasks: [],
+      notes: '',
+      createdAt: new Date().toISOString(),
+    };
+    setState((prev) => ({
+      ...prev,
+      projects: [newProject, ...(prev.projects || [])],
+    }));
+  };
+
+  const handleDeleteProject = (projectId: string) => {
+    setState((prev) => ({
+      ...prev,
+      projects: (prev.projects || []).filter((p) => p.id !== projectId),
+    }));
+    if (openedProjectFolder?.id === projectId) {
+      setOpenedProjectFolder(null);
+    }
+  };
+
+  const handleCompleteProjectFolder = (projectId: string) => {
+    sounds.playLevelUp();
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 },
+    });
+    setState((prev) => {
+      const updatedProjects = (prev.projects || []).map((p) => {
+        if (p.id === projectId) {
+          return { ...p, completed: true };
+        }
+        return p;
+      });
+      return {
+        ...prev,
+        xp: prev.xp + 100,
+        projects: updatedProjects,
+      };
+    });
+    setOpenedProjectFolder((prev) => {
+      if (prev && prev.id === projectId) {
+        return { ...prev, completed: true };
+      }
+      return prev;
+    });
+  };
+
+  const handleAddSubtask = (projectId: string, title: string) => {
+    const newSubtask: ProjectSubtask = {
+      id: `st-${Date.now()}`,
+      title,
+      estimatedMinutes: 25,
+      completed: false,
+    };
+    setState((prev) => {
+      const updatedProjects = (prev.projects || []).map((p) => {
+        if (p.id === projectId) {
+          return { ...p, subtasks: [...p.subtasks, newSubtask] };
+        }
+        return p;
+      });
+      return { ...prev, projects: updatedProjects };
+    });
+    setOpenedProjectFolder((prev) => {
+      if (prev && prev.id === projectId) {
+        return { ...prev, subtasks: [...prev.subtasks, newSubtask] };
+      }
+      return prev;
+    });
+  };
+
+  const handleToggleSubtask = (projectId: string, subtaskId: string) => {
+    setState((prev) => {
+      const updatedProjects = (prev.projects || []).map((p) => {
+        if (p.id === projectId) {
+          const updatedSubtasks = p.subtasks.map((st) =>
+            st.id === subtaskId ? { ...st, completed: !st.completed } : st
+          );
+          return { ...p, subtasks: updatedSubtasks };
+        }
+        return p;
+      });
+      return { ...prev, projects: updatedProjects };
+    });
+    setOpenedProjectFolder((prev) => {
+      if (prev && prev.id === projectId) {
+        const updatedSubtasks = prev.subtasks.map((st) =>
+          st.id === subtaskId ? { ...st, completed: !st.completed } : st
+        );
+        return { ...prev, subtasks: updatedSubtasks };
+      }
+      return prev;
+    });
+  };
+
+  const handleDeleteSubtask = (projectId: string, subtaskId: string) => {
+    setState((prev) => {
+      const updatedProjects = (prev.projects || []).map((p) => {
+        if (p.id === projectId) {
+          return { ...p, subtasks: p.subtasks.filter((st) => st.id !== subtaskId) };
+        }
+        return p;
+      });
+      return { ...prev, projects: updatedProjects };
+    });
+    setOpenedProjectFolder((prev) => {
+      if (prev && prev.id === projectId) {
+        return { ...prev, subtasks: prev.subtasks.filter((st) => st.id !== subtaskId) };
+      }
+      return prev;
+    });
+  };
+
+  const handlePushSubtaskToQuestboard = (projectId: string, subtask: ProjectSubtask) => {
+    const newQuest: Quest = {
+      id: `quest-st-${Date.now()}`,
+      title: `[${openedProjectFolder?.name || 'Project'}] ${subtask.title}`,
+      categoryId: openedProjectFolder?.category || 'coding',
+      estimatedMinutes: subtask.estimatedMinutes,
+      hasCustomDeadline: true,
+      dueDateTime: openedProjectFolder?.targetDeadline || null,
+      status: 'idle',
+      timeSpentSeconds: 0,
+      createdAt: new Date().toISOString(),
+    };
+
+    setState((prev) => {
+      const updatedProjects = (prev.projects || []).map((p) => {
+        if (p.id === projectId) {
+          const updatedSubtasks = p.subtasks.map((st) =>
+            st.id === subtask.id ? { ...st, pushedToQuestboard: true } : st
+          );
+          return { ...p, subtasks: updatedSubtasks };
+        }
+        return p;
+      });
+      return { ...prev, quests: [newQuest, ...prev.quests], projects: updatedProjects };
+    });
+
+    setOpenedProjectFolder((prev) => {
+      if (prev && prev.id === projectId) {
+        const updatedSubtasks = prev.subtasks.map((st) =>
+          st.id === subtask.id ? { ...st, pushedToQuestboard: true } : st
+        );
+        return { ...prev, subtasks: updatedSubtasks };
+      }
+      return prev;
+    });
+  };
+
+  const handleUpdateNotes = (projectId: string, notes: string) => {
+    setState((prev) => {
+      const updatedProjects = (prev.projects || []).map((p) => {
+        if (p.id === projectId) {
+          return { ...p, notes };
+        }
+        return p;
+      });
+      return { ...prev, projects: updatedProjects };
+    });
+    setOpenedProjectFolder((prev) => {
+      if (prev && prev.id === projectId) {
+        return { ...prev, notes };
+      }
+      return prev;
+    });
+  };
 
   const handleChangeClass = (newClass: CharacterClass) => {
     const newChallenges = getWeeklyChallenges(newClass);
@@ -942,6 +1133,19 @@ export function App() {
           </div>
         )}
 
+        {/* Dedicated Code Projects Folder Hub View */}
+        {activeTab === 'projects' && (
+          <div className="max-w-7xl mx-auto space-y-6">
+            <ProjectFolderHub
+              projects={state.projects || []}
+              onOpenAddProjectModal={() => setIsAddProjectModalOpen(true)}
+              onOpenProjectWorkspace={(project) => setOpenedProjectFolder(project)}
+              onDeleteProject={handleDeleteProject}
+              onCompleteProjectFolder={handleCompleteProjectFolder}
+            />
+          </div>
+        )}
+
         {/* Dedicated Bosses & Challenges View */}
         {activeTab === 'challenges' && (
           <div className="max-w-4xl mx-auto space-y-6">
@@ -1091,6 +1295,24 @@ export function App() {
         isOpen={isAddCategoryModalOpen}
         onClose={() => setIsAddCategoryModalOpen(false)}
         onAddCategory={handleAddCategory}
+      />
+
+      <AddProjectModal
+        isOpen={isAddProjectModalOpen}
+        onClose={() => setIsAddProjectModalOpen(false)}
+        onAddProject={handleAddProject}
+      />
+
+      <ProjectWorkspaceModal
+        isOpen={Boolean(openedProjectFolder)}
+        onClose={() => setOpenedProjectFolder(null)}
+        project={openedProjectFolder}
+        onAddSubtask={handleAddSubtask}
+        onToggleSubtask={handleToggleSubtask}
+        onDeleteSubtask={handleDeleteSubtask}
+        onPushSubtaskToQuestboard={handlePushSubtaskToQuestboard}
+        onUpdateNotes={handleUpdateNotes}
+        onCompleteProjectFolder={handleCompleteProjectFolder}
       />
 
       <AvatarModal

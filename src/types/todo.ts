@@ -18,7 +18,7 @@ export interface UserProfile {
 
 export interface AvatarState {
   skinTone: string;
-  hairStyle: string;     // 'shanks_flow' | 'spiky' | 'short' | 'long' | 'bun' | 'afro' | 'braids'
+  hairStyle: string;     // 'samurai_bun' | 'spiky' | 'short' | 'long' | 'bun' | 'bald'
   hairColor: string;
   eyesStyle: string;
   headItem: string;      // 'straw_hat' | 'pirate_bicorne' | 'wizard_hat' | 'crown' | 'headphones' | 'viking' | 'bunny_ears' | 'none'
@@ -91,6 +91,27 @@ export interface AvatarTrait {
   multiplier: number;
 }
 
+export interface ProjectSubtask {
+  id: string;
+  title: string;
+  estimatedMinutes: number;
+  completed: boolean;
+  pushedToQuestboard?: boolean;
+}
+
+export interface ProjectFolder {
+  id: string;
+  name: string;
+  category: CharacterClass;
+  colorTag: string;
+  overview: string;
+  targetDeadline: string; // YYYY-MM-DD
+  subtasks: ProjectSubtask[];
+  notes: string;
+  createdAt: string;
+  completed?: boolean;
+}
+
 export interface AppState {
   user: UserProfile;
   settings: UserSettings;
@@ -104,4 +125,5 @@ export interface AppState {
   challenges: CategoryChallenge[];
   achievements: Achievement[];
   traits: AvatarTrait[];
+  projects: ProjectFolder[];
 }
